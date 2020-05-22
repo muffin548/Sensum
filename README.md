@@ -2,6 +2,8 @@
 
 # NO LONGER IN DEVELOPMENT.
 
+# DETECTED HOOKING, YOU NEED TO REPLACE VFUNC_HOOK FOR MINHOOK
+
 
 
 # Be sure to put game-items.json file into memesense folder in csgo folder.
