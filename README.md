@@ -1,6 +1,6 @@
 # Sensum - Internal legit cheat based of CSGOSimple, fully undetected as of September 21st 2020.
+# IMPORTANT: Remember to compile in Release #86 to minimalize fps drops and other problems.
 # IMPORTANT: Config location since now is in "C:\\Sensum".
-[![C++](https://img.shields.io/badge/language-C%2B%2B-%23f34b7d.svg)](https://en.wikipedia.org/wiki/C%2B%2B) [![CS:GO](https://img.shields.io/badge/game-CS%3AGO-yellow.svg)](https://store.steampowered.com/app/730/CounterStrike_Global_Offensive/) [![Windows](https://img.shields.io/badge/platform-Windows-0078d7.svg)](https://en.wikipedia.org/wiki/Microsoft_Windows) [![x86](https://img.shields.io/badge/arch-x86-red.svg)](https://en.wikipedia.org/wiki/X86)
 # IMPORTANT: Remember to put skin_kits.json file into "Sensum" folder in C drive. (Ex: C:\\Sensum)
 
 ![Screenshot](https://i.imgur.com/Jwo5jnZ.png)
