@@ -1,14 +1,16 @@
 ﻿#include "hooks.h"
-#include "../globals.h"
-#include "../options.hpp"
+#include "../settings/globals.h"
+#include "../settings/options.hpp"
 #include "../helpers/input.h"
 #include "../helpers/console.h"
 #include "../helpers/entities.h"
 #include "../features/features.h"
-#include "..//runtime_saver.h"
+#include "../helpers/runtime_saver.h"
 #pragma intrinsic(_ReturnAddress)
 
 float side = 1.0f;
+
+static float next_lby = 0.0f;
 
 float real_angle = 0.0f;
 float view_angle = 0.0f;
@@ -31,110 +33,15 @@ float AngleDiff(float destAngle, float srcAngle) {
 	return delta;
 }
 
-bool IntersectionBoundingBox(const Vector& src, const Vector& dir, const Vector& min, const Vector& max, Vector* hit_point)
-{
-	/*
-	Fast Ray-Box Intersection
-	by Andrew Woo
-	from "Graphics Gems", Academic Press, 1990
-	*/
-
-	constexpr int NUMDIM = 3;
-	constexpr int RIGHT = 0;
-	constexpr int LEFT = 1;
-	constexpr int MIDDLE = 2;
-
-	bool inside = true;
-	char quadrant[NUMDIM];
-	int i;
-
-	// Rind candidate planes; this loop can be avoided if
-	// rays cast all from the eye(assume perpsective view)
-	Vector candidatePlane;
-	for (i = 0; i < NUMDIM; i++)
-	{
-		if (src[i] < min[i])
-		{
-			quadrant[i] = LEFT;
-			candidatePlane[i] = min[i];
-			inside = false;
-		}
-		else if (src[i] > max[i])
-		{
-			quadrant[i] = RIGHT;
-			candidatePlane[i] = max[i];
-			inside = false;
-		}
-		else
-		{
-			quadrant[i] = MIDDLE;
-		}
-	}
-
-	// Ray origin inside bounding box
-	if (inside)
-	{
-		if (hit_point)
-			* hit_point = src;
-		return true;
-	}
-
-	// Calculate T distances to candidate planes
-	Vector maxT;
-	for (i = 0; i < NUMDIM; i++)
-	{
-		if (quadrant[i] != MIDDLE && dir[i] != 0.f)
-			maxT[i] = (candidatePlane[i] - src[i]) / dir[i];
-		else
-			maxT[i] = -1.f;
-	}
-
-	// Get largest of the maxT's for final choice of intersection
-	int whichPlane = 0;
-	for (i = 1; i < NUMDIM; i++)
-	{
-		if (maxT[whichPlane] < maxT[i])
-			whichPlane = i;
-	}
-
-	// Check final candidate actually inside box
-	if (maxT[whichPlane] < 0.f)
-		return false;
-
-	for (i = 0; i < NUMDIM; i++)
-	{
-		if (whichPlane != i)
-		{
-			float temp = src[i] + maxT[whichPlane] * dir[i];
-			if (temp < min[i] || temp > max[i])
-			{
-				return false;
-			}
-			else if (hit_point)
-			{
-				(*hit_point)[i] = temp;
-			}
-		}
-		else if (hit_point)
-		{
-			(*hit_point)[i] = candidatePlane[i];
-		}
-	}
-
-	// ray hits box
-	return true;
-}
-
 namespace hooks
 {
-	bool __stdcall client_mode::create_move_shared::hooked(float input_sample_frametime, CUserCmd* cmd)
+	bool __stdcall create_move::hooked(float input_sample_frametime, CUserCmd* cmd)
 	{
-		netchannel::setup();
-
-		static auto original = client_mode::hook.get_original<fn>(index);
+		cmd->viewangles.NormalizeClamp();
+		g::engine_client->SetViewAngles(cmd->viewangles);
 
 		if (!cmd || !cmd->command_number)
-			return original(interfaces::client_mode, input_sample_frametime, cmd);
+			return original(g::client_mode, input_sample_frametime, cmd);
 
 		const auto ebp = reinterpret_cast<uintptr_t*>(uintptr_t(_AddressOfReturnAddress()) - sizeof(void*));
 		auto& send_packet = *reinterpret_cast<bool*>(*ebp - 0x1C);
@@ -144,22 +51,13 @@ namespace hooks
 		if (settings::misc::bhop)
 			features::bhop(cmd);
 
-		if (settings::misc::human_bhop)
-			features::human_bhop(cmd);
-
 		if (settings::misc::auto_strafe)
 			features::auto_strafe(cmd);
 
-		if (settings::misc::moon_walk)
-			features::moon_walk(cmd);
-
 		slow_walk::handle(cmd);
-		fake_lags::handle(cmd, *sendpacket2);
 
-		visuals::remove_3dsky();
-		visuals::remove_shadows();
-
-		features::edgeJumpPre(cmd);
+		entities::on_create_move(cmd);
+		features::edge_jump_pre(cmd);
 		engine_prediction::start(cmd);
 
 		visuals::fetch_entities();
@@ -192,8 +90,6 @@ namespace hooks
 			SpawnTime = g::local_player->m_flSpawnTime();
 		}
 
-		static float next_lby = 0.0f;
-
 		QAngle OldAngles = cmd->viewangles;
 
 		auto Desync = [OldAngles](CUserCmd* cmd, bool* send_packet)
@@ -203,7 +99,7 @@ namespace hooks
 				|| !g::local_player->IsAlive())
 				return;
 
-			if (interfaces::local_player->m_bGunGameImmunity() || interfaces::local_player->m_fFlags() & FL_FROZEN)
+			if (g::local_player->m_bGunGameImmunity() || g::local_player->m_fFlags() & FL_FROZEN)
 				return;
 
 			if (!utils::IsPlayingMM() && utils::IsValveDS())
@@ -214,7 +110,7 @@ namespace hooks
 				return;
 
 			auto weapon_index = weapon->m_iItemDefinitionIndex();
-			if ((weapon_index == WEAPON_GLOCK || weapon_index == WEAPON_FAMAS) && weapon->m_flNextPrimaryAttack() >= g::global_vars->curtime)
+			if ((weapon_index == WEAPON_GLOCK || weapon_index == WEAPON_FAMAS || weapon_index == WEAPON_REVOLVER) && weapon->m_flNextPrimaryAttack() >= g::global_vars->curtime)
 				return;
 
 			auto weapon_data = weapon->get_weapon_data();
@@ -233,29 +129,8 @@ namespace hooks
 			}
 
 			static bool broke_lby = false;
-
-			if (settings::desync::desync_mode == 1) {
-				float minimal_move = 2.0f;
-				if (g::local_player->m_fFlags() & FL_DUCKING)
-					minimal_move *= 3.f;
-
-				if (cmd->buttons & IN_WALK)
-					minimal_move *= 3.f;
-
-				bool should_move = g::local_player->m_vecVelocity().Length2D() <= 0.0f
-					|| std::fabsf(g::local_player->m_vecVelocity().z) <= 100.0f;
-
-				if ((cmd->command_number % 2) == 1) {
-					cmd->viewangles.yaw += 120.0f * side; //was 120.0f * side
-					if (should_move)
-						cmd->sidemove -= minimal_move;
-					*send_packet = false;
-				}
-				else if (should_move) {
-					cmd->sidemove += minimal_move;
-				}
-			}
-			else {
+			if (settings::desync::desync_mode == 2)
+			{
 				if (next_lby >= g::global_vars->curtime) {
 					if (!broke_lby && *send_packet && g::client_state->chokedcommands > 0)
 						return;
@@ -270,7 +145,6 @@ namespace hooks
 					cmd->viewangles.yaw += 120.0f * -side; //was 120.f and -side
 				}
 			}
-
 			math::FixAngles(cmd->viewangles);
 			math::MovementFix(cmd, OldAngles, cmd->viewangles);
 		};
@@ -282,7 +156,6 @@ namespace hooks
 		{
 			aimbot::handle(cmd);
 			zeusbot::handle(cmd);
-			knife_bot::handle(cmd, *sendpacket2);
 		}
 
 		static int definition_index = 7;
@@ -291,19 +164,19 @@ namespace hooks
 		if (a_settings->recoil.enabled)
 			aimbot::OnMove(cmd);
 
+		if (settings::misc::smoke_helper)
+		{
+			visuals::SmokeHelperAimbot(cmd);
+			visuals::PopflashHelperAimbot(cmd);
+		}
+
 		visuals::runCM(cmd);
 
 		if (settings::misc::fast_stop)
-			features::fastStop(cmd);
+			features::fast_stop(cmd);
 
 		if (g::local_player && g::local_player->IsAlive() && (cmd->buttons & IN_ATTACK || cmd->buttons & IN_ATTACK2))
 			saver.LastShotEyePos = g::local_player->GetEyePos();
-
-		/*if (settings::misc::block_bot) //WIP blockbot, not fully working.
-			features::blockBot(cmd); */
-
-		//if (settings::misc::selfnade)
-			//features::SelfNade(cmd);
 
 		if (settings::misc::lefthandknife)
 			visuals::KnifeLeft();
@@ -319,68 +192,7 @@ namespace hooks
 			cmd->viewangles = g::client_state->viewangles;
 		}
 
-		static ConVar* m_yaw = m_yaw = g::cvar->find("m_yaw");
-		static ConVar* m_pitch = m_pitch = g::cvar->find("m_pitch");
-		static ConVar* sensitivity = sensitivity = g::cvar->find("sensitivity");
-
-		static QAngle m_angOldViewangles = g::client_state->viewangles;
-
-		float delta_x = std::remainderf(cmd->viewangles.pitch - m_angOldViewangles.pitch, 360.0f);
-		float delta_y = std::remainderf(cmd->viewangles.yaw - m_angOldViewangles.yaw, 360.0f);
-
-		if (delta_x != 0.0f) { //This stuff should be mouse 'dx' fix from Aimware dump.
-			float mouse_y = -((delta_x / m_pitch->GetFloat()) / sensitivity->GetFloat());
-			short mousedy;
-			if (mouse_y <= 32767.0f) {
-				if (mouse_y >= -32768.0f) {
-					if (mouse_y >= 1.0f || mouse_y < 0.0f) {
-						if (mouse_y <= -1.0f || mouse_y > 0.0f)
-							mousedy = static_cast<short>(mouse_y);
-						else
-							mousedy = -1;
-					}
-					else {
-						mousedy = 1;
-					}
-				}
-				else {
-					mousedy = 0x8000u;
-				}
-			}
-			else {
-				mousedy = 0x7FFF;
-			}
-
-			cmd->mousedy = mousedy;
-		}
-
-		if (delta_y != 0.0f) {
-			float mouse_x = -((delta_y / m_yaw->GetFloat()) / sensitivity->GetFloat());
-			short mousedx;
-			if (mouse_x <= 32767.0f) {
-				if (mouse_x >= -32768.0f) {
-					if (mouse_x >= 1.0f || mouse_x < 0.0f) {
-						if (mouse_x <= -1.0f || mouse_x > 0.0f)
-							mousedx = static_cast<short>(mouse_x);
-						else
-							mousedx = -1;
-					}
-					else {
-						mousedx = 1;
-					}
-				}
-				else {
-					mousedx = 0x8000u;
-				}
-			}
-			else {
-				mousedx = 0x7FFF;
-			}
-
-			cmd->mousedx = mousedx;
-		}
-
-		auto anim_state = g::local_player->GetPlayerAnimState2();
+		auto anim_state = g::local_player->GetPlayerAnimState();
 		if (anim_state) {
 			CCSGOPlayerAnimState anim_state_backup = *anim_state;
 			*anim_state = g_AnimState;
@@ -406,19 +218,15 @@ namespace hooks
 		}
 
 		engine_prediction::finish(cmd);
-		features::edgeJumpPost(cmd);
-
-		if (settings::misc::selfnade)
-			features::SelfNade(cmd);
-
-		if (!(cmd->buttons & IN_BULLRUSH))
-			cmd->buttons |= IN_BULLRUSH;
+		features::edge_jump_post(cmd);
 
 		cmd->viewangles.pitch = std::clamp(cmd->viewangles.pitch, -89.0f, 89.0f);
 		cmd->viewangles.yaw = std::clamp(cmd->viewangles.yaw, -180.0f, 180.0f);
 		cmd->viewangles.roll = 0.0f;
 		cmd->forwardmove = std::clamp(cmd->forwardmove, -450.0f, 450.0f);
 		cmd->sidemove = std::clamp(cmd->sidemove, -450.0f, 450.0f);
+		cmd->upmove = std::clamp(cmd->upmove, -320.0f, 320.0f);
+
 		return false;
 	}
 }

@@ -52,7 +52,7 @@ void Color::GetColor(int& _r, int& _g, int& _b, int& _a) const
 }
 bool Color::operator== (const Color& rhs) const
 {
-	return (*((int*)this) == *((int*)& rhs));
+	return (*((int*)this) == *((int*)&rhs));
 }
 bool Color::operator!= (const Color& rhs) const
 {

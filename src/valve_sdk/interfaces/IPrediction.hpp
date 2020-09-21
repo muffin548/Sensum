@@ -4,55 +4,69 @@
 #include "../misc/CUserCmd.hpp"
 #include "IMoveHelper.hpp"
 
-class CMoveData
-{
+class CMoveData {
 public:
-	bool    m_bFirstRunOfFunctions : 1;
-	bool    m_bGameCodeMovedPlayer : 1;
-	int     m_nPlayerHandle;        // edict index on server, client entity handle on client=
-	int     m_nImpulseCommand;      // Impulse command issued.
-	Vector  m_vecViewAngles;        // Command view angles (local space)
-	Vector  m_vecAbsViewAngles;     // Command view angles (world space)
-	int     m_nButtons;             // Attack buttons.
-	int     m_nOldButtons;          // From host_client->oldbuttons;
-	float   m_flForwardMove;
-	float   m_flSideMove;
-	float   m_flUpMove;
-	float   m_flMaxSpeed;
-	float   m_flClientMaxSpeed;
-	Vector  m_vecVelocity;          // edict::velocity        // Current movement direction.
-	Vector  m_vecAngles;            // edict::angles
-	Vector  m_vecOldAngles;
-	float   m_outStepHeight;        // how much you climbed this move
-	Vector  m_outWishVel;           // This is where you tried
-	Vector  m_outJumpVel;           // This is your jump velocity
-	Vector  m_vecConstraintCenter;
-	float   m_flConstraintRadius;
-	float   m_flConstraintWidth;
-	float   m_flConstraintSpeedFactor;
-	float   m_flUnknown[5];
-	Vector  m_vecAbsOrigin;
+	bool			m_bFirstRunOfFunctions : 1;
+	bool			m_bGameCodeMovedPlayer : 1;
+	bool			m_bNoAirControl : 1;
+
+	unsigned long	m_nPlayerHandle;
+	int				m_nImpulseCommand;
+	QAngle			m_vecViewAngles;
+	QAngle			m_vecAbsViewAngles;
+	int				m_nButtons;
+	int				m_nOldButtons;
+	float			m_flForwardMove;
+	float			m_flSideMove;
+	float			m_flUpMove;
+
+	float			m_flMaxSpeed;
+	float			m_flClientMaxSpeed;
+
+	Vector			m_vecVelocity;
+	Vector			m_vecOldVelocity;
+	float			somefloat;
+	QAngle			m_vecAngles;
+	QAngle			m_vecOldAngles;
+
+	float			m_outStepHeight;
+	Vector			m_outWishVel;
+	Vector			m_outJumpVel;
+
+	Vector			m_vecConstraintCenter;
+	float			m_flConstraintRadius;
+	float			m_flConstraintWidth;
+	float			m_flConstraintSpeedFactor;
+	bool			m_bConstraintPastRadius;
+
+	void			SetAbsOrigin(const Vector& vec);
+	const Vector&	GetAbsOrigin() const;
+
+private:
+	Vector			m_vecAbsOrigin;		// edict::origin
 };
 
 class c_base_player;
 
-class IGameMovement
-{
+class IGameMovement {
 public:
 	virtual			~IGameMovement(void) {}
 
-	virtual void	          ProcessMovement(c_base_player* pPlayer, void* pMove) = 0;
-	virtual void	          Reset(void) = 0;
-	virtual void	          StartTrackPredictionErrors(c_base_player* pPlayer) = 0;
-	virtual void	          FinishTrackPredictionErrors(c_base_player* pPlayer) = 0;
-	virtual void	          DiffPrint(char const* fmt, ...) = 0;
+	virtual void	ProcessMovement(c_base_player* pPlayer, CMoveData* pMove) = 0;
+	virtual void	Reset(void) = 0;
+	virtual void	StartTrackPredictionErrors(c_base_player* pPlayer) = 0;
+	virtual void	FinishTrackPredictionErrors(c_base_player* pPlayer) = 0;
+	virtual void	DiffPrint(char const* fmt, ...) = 0;
+
 	virtual Vector const& GetPlayerMins(bool ducked) const = 0;
 	virtual Vector const& GetPlayerMaxs(bool ducked) const = 0;
 	virtual Vector const& GetPlayerViewOffset(bool ducked) const = 0;
-	virtual bool		        IsMovingPlayerStuck(void) const = 0;
-	virtual c_base_player* GetMovingPlayer(void) const = 0;
-	virtual void		        UnblockPusher(c_base_player* pPlayer, c_base_player* pPusher) = 0;
-	virtual void            SetupMovementBounds(CMoveData* pMove) = 0;
+
+	virtual bool			IsMovingPlayerStuck(void) const = 0;
+	virtual c_base_player*	GetMovingPlayer(void) const = 0;
+	virtual void			UnblockPusher(c_base_player* pPlayer, c_base_player* pPusher) = 0;
+
+	virtual void SetupMovementBounds(CMoveData* pMove) = 0;
 };
 
 class CGameMovement

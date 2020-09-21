@@ -9,7 +9,7 @@ void features::auto_strafe(CUserCmd* cmd)
 	else if (cmd->buttons & IN_BACK)
 		backward_style = true;
 
-	if (!interfaces::local_player || !interfaces::local_player->IsAlive())
+	if (!g::local_player || !g::local_player->IsAlive())
 		return;
 
 	if (cmd->buttons & IN_FORWARD || cmd->buttons & IN_BACK || cmd->buttons & IN_MOVELEFT || cmd->buttons & IN_MOVERIGHT)
@@ -18,13 +18,13 @@ void features::auto_strafe(CUserCmd* cmd)
 	if (cmd->mousedx <= 1 && cmd->mousedx >= -1)
 		return;
 
-	if (interfaces::local_player->m_fFlags() & FL_ONGROUND)
+	if (g::local_player->m_fFlags() & FL_ONGROUND)
 		return;
 
-	if (interfaces::local_player->m_nMoveType() == MOVETYPE_NOCLIP)
+	if (g::local_player->m_nMoveType() == MOVETYPE_NOCLIP)
 		return;
 
-	if (interfaces::local_player->m_nMoveType() == MOVETYPE_LADDER)
+	if (g::local_player->m_nMoveType() == MOVETYPE_LADDER)
 		return;
 
 	if (backward_style)

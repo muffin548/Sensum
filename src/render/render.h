@@ -33,10 +33,8 @@ namespace render
 	bool is_ready();
 
 	/*gui helpers*/
-	const char* ___(const char* english, const char* russian);
-
+	
 	void tooltip(const char* text);
-	void tooltip(const char* english, const char* russian);
 
 	bool selectable(const char* label, bool selected);
 	void combo(const char* label, const std::function<void(std::string&)>& body);
@@ -50,13 +48,11 @@ namespace render
 
 	void columns(int count);
 	void separator(const char* label);
-	void separator(const char* en, const char* ru);
 
 	void child(const char* label, const std::function<void()>& body);
 
 	void checkbox(const char* label, bool* value);
-	void checkbox(const char* english, const char* russian, bool* value);
-
+	
 	void switch_hwnd();
 
 	namespace menu
@@ -79,6 +75,8 @@ namespace render
 		void players_tab();
 		void configs_tab();
 		void colors_tab();
+
+		void initconfig();
 	}
 
 	namespace timers

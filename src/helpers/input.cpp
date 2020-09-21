@@ -1,7 +1,7 @@
 #include "input.h"
 #include "console.h"
 
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../imgui/imgui.h"
 #include "../render/render.h"
 #include "../valve_sdk/sdk.hpp"
@@ -184,12 +184,12 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void input_system::initialize()
 {
-	//m_hTargetWindow = HWND(interfaces::input_system->get_window());
+	//m_hTargetWindow = HWND(g::input_system->get_window());
 	m_ulOldWndProc = 0;
 
 	D3DDEVICE_CREATION_PARAMETERS params;
 
-	if (FAILED(interfaces::d3_device->GetCreationParameters(&params)))
+	if (FAILED(g::d3_device->GetCreationParameters(&params)))
 		throw std::runtime_error("[InputSys] GetCreationParameters failed.");
 
 	m_hTargetWindow = params.hFocusWindow;

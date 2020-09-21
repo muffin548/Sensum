@@ -1,20 +1,16 @@
 #include "hooks.h"
-#include "../globals.h"
-#include "../settings.h"
+#include "../settings/globals.h"
+#include "../settings/settings.h"
 #include "../helpers/console.h"
 #include "../helpers/entities.h"
 
 namespace hooks
 {
-	vfunc_hook fire_bullets::hook;
-
 	void __stdcall fire_bullets::hooked(int type)
 	{
-		static const auto original = hook.get_original<fn>(index);
+		original(g::fire_bullets, type);
 
-		original(interfaces::fire_bullets, type);
-
-		const auto index = interfaces::fire_bullets->m_iPlayer + 1;
+		const auto index = g::fire_bullets->m_iPlayer + 1;
 		auto* entity = c_base_player::GetPlayerByIndex(index);
 		if (!entity || !entity->IsPlayer())
 			return;
@@ -27,7 +23,7 @@ namespace hooks
 				{
 					player.is_shooting = true;
 					player.m_flShotTime = entity->m_flSimulationTime();
-					player.shot_origin = interfaces::fire_bullets->m_vecOrigin;
+					player.shot_origin = g::fire_bullets->m_vecOrigin;
 
 					return;
 				}

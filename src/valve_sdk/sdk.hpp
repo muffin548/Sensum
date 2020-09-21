@@ -14,7 +14,6 @@
 #include "math/QAngle.hpp"
 #include "math/Vectors.hpp"
 #include "misc/Studio.hpp"
-#include "..//glow_helper.h"
 
 #include "interfaces/IRefCounted.h"
 #include "interfaces/IAppSystem.h"
@@ -46,7 +45,9 @@
 #include "interfaces/IMemAlloc.h"
 #include "interfaces/IFileSystem.h"
 #include "interfaces/IViewRenderBeams.h"
-#include "..//IStudioRender.h"
+#include "interfaces/CGlowObjectManager.h"
+#include "interfaces/IStudioRender.h"
+#include "interfaces/IEngineSound.hpp"
 
 #include "misc/Convar.hpp"
 #include "interfaces/ICvar.h"
@@ -54,7 +55,6 @@
 
 #include "netvars.hpp"
 #include "steam.h"
-#include "interfaces/CGlowObjectManager.h"
 
 struct IDirect3DDevice9;
 
@@ -88,7 +88,6 @@ public:
 };
 
 class IRecipientFilter;
-class IEngineSound;
 class IInputSystem
 {
 public:
@@ -194,12 +193,11 @@ public:
 	QAngle m_absAngles; //0x0020
 };
 
-class CModelRenderSystem;
 class c_cs_game_rules_proxy;
 
-namespace interfaces
+namespace g
 {
-	extern CInput* Input;
+	extern CInput* input;
 	extern IDirect3DDevice9* d3_device;
 	extern IMDLCache* mdl_cache;
 	extern IPrediction* prediction;
@@ -229,19 +227,16 @@ namespace interfaces
 	extern IVEngineVGui* engine_vgui;
 	extern CRender* render;
 	extern c_cs_player_resource** player_resource;
-	extern CHud* Hud;
-	extern CGlowObjectManager* glow_obj_manager;
+	extern CHud* hud_system;
 	extern ILocalize* localize;
 	extern IMemAlloc* mem_alloc;
 	extern IWeaponSystem* weapon_system;
 	extern IFileSystem* file_system;
-	extern CModelRenderSystem* model_render_system;
 	extern IViewRenderBeams* view_render_beams;
 	extern CHudChat* hud_chat;
 	extern C_TEFireBullets* fire_bullets;
 	extern c_cs_game_rules_proxy* game_rules_proxy;
 	extern glow_manager_t* glow_manager;
-	extern uintptr_t* g_SpatialPartition;
 	extern IStudioRender* g_studiorender;
 
 	extern ISteamUser* steam_user;
@@ -312,29 +307,4 @@ struct matsystem_config_t
 };
 #pragma pack(pop)
 
-#pragma pack(push, 1)
-struct SndInfo_t
-{
-	int m_nGuid;
-	void* m_filenameHandle;
-	int m_nSoundSource;
-	int m_nChannel;
-	int m_nSpeakerEntity;
-	float m_flVolume;
-	float m_flLastSpatializedVolume;
-	float m_flRadius;
-	int m_nPitch;
-	Vector* m_pOrigin;
-	Vector* m_pDirection;
-	bool m_bUpdatePositions;
-	bool m_bIsSentence;
-	bool m_bDryMix;
-	bool m_bSpeaker;
-	bool m_bSpecialDSP;
-	bool m_bFromServer;
-};
-#pragma pack(pop)
-
 #include "misc/EHandle.hpp"
-
-namespace g = interfaces; //You dont need now to type interfaces:: , "g::" is shorter,cause why not //MJ409

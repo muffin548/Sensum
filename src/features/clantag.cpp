@@ -1,5 +1,5 @@
 #include "features.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../helpers/utils.h"
 
 namespace clantag
@@ -32,7 +32,7 @@ namespace clantag
 
 	void animate()
 	{
-		if (!interfaces::local_player || !globals::clantag::animation)
+		if (!g::local_player || !globals::clantag::animation)
 			return;
 
 		if (globals::clantag::value.empty() || globals::clantag::value.length() == 0)
@@ -44,10 +44,10 @@ namespace clantag
 			pos = 0;
 		}
 
-		if (last_time + globals::clantag::delay > interfaces::global_vars->realtime)
+		if (last_time + globals::clantag::delay > g::global_vars->realtime)
 			return;
 
-		last_time = interfaces::global_vars->realtime;
+		last_time = g::global_vars->realtime;
 
 		set(clantag.substr(0, pos).c_str(), xorstr_("Sensum"));
 

@@ -1,5 +1,5 @@
 #include "imdraw.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 
 namespace imdraw
 {

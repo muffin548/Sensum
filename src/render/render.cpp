@@ -1,7 +1,7 @@
 #include "render.h"
 
-#include "../globals.h"
-#include "../settings.h"
+#include "../settings/globals.h"
+#include "../settings/settings.h"
 #include "../helpers/input.h"
 #include "../helpers/imdraw.h"
 
@@ -19,10 +19,10 @@ namespace render
 		if (menu::is_visible())
 		{
 			if (!saved_hwnd)
-				std::swap(saved_hwnd, interfaces::input_system->get_window());
+				std::swap(saved_hwnd, g::input_system->get_window());
 		}
 		else if (saved_hwnd)
-			std::swap(saved_hwnd, interfaces::input_system->get_window());
+			std::swap(saved_hwnd, g::input_system->get_window());
 	}
 
 	namespace fonts
@@ -70,7 +70,7 @@ namespace render
 	void initialize()
 	{
 		ImGui::CreateContext();
-		ImGui_ImplDX9_Init(input_system::get_main_window(), interfaces::d3_device);
+		ImGui_ImplDX9_Init(input_system::get_main_window(), g::d3_device);
 
 		s_ready = true;
 
@@ -123,20 +123,10 @@ namespace render
 		return s_ready;
 	}
 
-	const char* ___(const char* english, const char* russian)
-	{
-		return globals::russian_language ? russian : english;
-	}
-
 	void tooltip(const char* text)
 	{
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip(text);
-	}
-
-	void tooltip(const char* english, const char* russian)
-	{
-		tooltip(___(english, russian));
 	}
 
 	ImVec2 get_listbox_size(float x, float y_offset)
@@ -198,11 +188,6 @@ namespace render
 		ImGui::Columns(count, nullptr, false);
 	}
 
-	void separator(const char* en, const char* ru)
-	{
-		separator(___(en, ru));
-	}
-
 	void separator(const char* label)
 	{
 		auto size = ImGui::CalcTextSize(label);
@@ -239,11 +224,6 @@ namespace render
 	void checkbox(const char* label, bool* value)
 	{
 		ImGui::Checkbox(label, value);
-	}
-
-	void checkbox(const char* english, const char* russian, bool* value)
-	{
-		checkbox(___(english, russian), value);
 	}
 
 	void combo(const char* label, const std::function<void(std::string&)>& body)

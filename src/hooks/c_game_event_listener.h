@@ -1,10 +1,11 @@
 #pragma once
-#include "../Sounds.h"
-#include "..//HitPossitionHelper.h"
-#include "..//runtime_saver.h"
-#include "..//esp.hpp"
+#pragma comment(lib, "Winmm.lib")
 
-#pragma comment(lib, "Winmm.lib") //PlaySoundA fix
+#include "../features/Sounds.h"
+#include "../helpers/HitPossitionHelper.h"
+#include "../helpers/runtime_saver.h"
+#include "../features/esp.hpp"
+#include "../features/soundesp.h"
 
 ConVar* game_type = nullptr;
 ConVar* game_mode = nullptr;
@@ -59,7 +60,7 @@ std::map<std::string, std::string> weaponNames =
 { "weapon_flashbang", "Flashbang" },
 { "weapon_molotov", "Molotov" },
 { "weapon_smokegrenade", "Smoke" },
-{ "weapon_incendiary", "Incendiary" },
+{ "weapon_incgrenade", "Molotov" },
 { "weapon_decoy", "Decoy" },
 { "weapon_taser", "Zeus x27" },
 };
@@ -112,6 +113,10 @@ class c_game_event_listener final : public IGameEventListener2
 			color_modulation::event();
 			globals::team_damage.clear();
 		}
+		else if (name == FNV("player_footstep"))
+		{
+			sound_esp.event_player_footstep(context);
+		}
 		else if (name == FNV("player_death"))
 		{
 			auto attacker = c_base_player::GetPlayerByUserId(context->GetInt("attacker"));
@@ -121,6 +126,26 @@ class c_game_event_listener final : public IGameEventListener2
 
 			if (attacker->m_iTeamNum() == target->m_iTeamNum())
 				globals::team_kill[context->GetInt("attacker")] += globals::teamkills + 1;
+
+			if (g::engine_client->GetPlayerForUserID(context->GetInt("attacker")) == g::engine_client->GetLocalPlayer())
+			{
+				if (!target->GetPlayerInfo().fakeplayer)
+				{
+					auto& weapon = g::local_player->m_hActiveWeapon();
+
+					if (weapon && weapon->IsWeapon()) {
+						auto& skin_data = skins::statrack_items[weapon->m_iItemDefinitionIndex()];
+						auto& skin_data2 = skins::m_items[weapon->m_iItemDefinitionIndex()];
+						if (skin_data2.enabled && skin_data2.stat_track.enabled) {
+							skin_data.statrack_new.counter++;
+							weapon->m_nFallbackStatTrak() = skin_data.statrack_new.counter;
+							weapon->GetClientNetworkable()->PostDataUpdate(0);
+							weapon->GetClientNetworkable()->OnDataChanged(0);
+						}
+					}
+					skins::save_statrack();
+				}
+			}
 		}
 		else if (name == FNV("player_hurt"))
 		{
@@ -131,33 +156,18 @@ class c_game_event_listener final : public IGameEventListener2
 
 			HitPossitionHelper::Get().OnFireEvent(context);
 
+			sound_esp.event_player_hurt(context);
+
 			if (attacker->m_iTeamNum() == target->m_iTeamNum())
 				globals::team_damage[context->GetInt("attacker")] += context->GetInt("dmg_health");
 
-			if (attacker == interfaces::local_player && target != interfaces::local_player)
+			if (attacker == g::local_player && target != g::local_player)
 			{
 				char buf[256];
 				sprintf_s(buf, "%s -%d (%d hp left)", target->GetPlayerInfo().szName, context->GetInt("dmg_health"), context->GetInt("health"));
 
 				notifies::push(buf, notify_state_s::debug_state);
 
-				/*if (!game_mode)
-					game_mode = interfaces::cvar->find("game_mode");
-
-				if (!game_type)
-					game_type = interfaces::cvar->find("game_type");
-
-				if (game_type->GetInt() == 0 && game_mode->GetInt() == 0) //casual
-					return;
-
-				if (game_type->GetInt() == 1 && game_mode->GetInt() == 1) //demolition
-					return;
-
-				if (game_type->GetInt() == 1 && game_mode->GetInt() == 0) //arms race
-					return;
-
-				if (game_type->GetInt() == 1 && game_mode->GetInt() == 2) //deathmatch
-					return;  */
 			}
 
 			if (settings::misc::damage_indicator)
@@ -219,25 +229,10 @@ class c_game_event_listener final : public IGameEventListener2
 		else if (name == FNV("item_purchase"))
 		{
 			auto enemy = c_base_player::GetPlayerByUserId(context->GetInt("userid"));
-			if (!enemy || !interfaces::local_player || enemy->m_iTeamNum() == interfaces::local_player->m_iTeamNum())
+			if (!enemy || !g::local_player || enemy->m_iTeamNum() == g::local_player->m_iTeamNum())
 				return;
 
-			if (!game_mode)
-				game_mode = interfaces::cvar->find("game_mode");
-
-			if (!game_type)
-				game_type = interfaces::cvar->find("game_type");
-
-			if (game_type->GetInt() == 0 && game_mode->GetInt() == 0) //casual
-				return;
-
-			if (game_type->GetInt() == 1 && game_mode->GetInt() == 1) //demolition
-				return;
-
-			if (game_type->GetInt() == 1 && game_mode->GetInt() == 0) //arms race
-				return;
-
-			if (game_type->GetInt() == 1 && game_mode->GetInt() == 2) //deathmatch
+			if (!utils::IsMMGamemodes())
 				return;
 
 			std::string buf2 = context->GetString("weapon");
@@ -245,94 +240,12 @@ class c_game_event_listener final : public IGameEventListener2
 			if(settings::esp::buylog)
 				WeaponCheck(buf2, enemy);
 		}
-		else if (name == FNV("round_start") && settings::misc::esp_random)
+		else if (name == FNV("round_start"))
 		{
-			int chance;
+			decltype(entities::m_local) m_local;
 
-			chance = rand() % 100 + 1;
-
-			char number[256];
-
-			sprintf_s(number, "Chance: %i%%", chance);
-
-			notifies::push(number, notify_state_s::debug_state);
-
-			auto filter = CHudChat::ChatFilters::CHAT_FILTER_NONE;
-			static int green = 3;
-			static int yellow = 15;
-			static int white = 0;
-
-			std::stringstream txt;
-			txt << allcolors[yellow] << "[Info]" << allcolors[white] << " " << number << "%";
-
-			g::hud_chat->ChatPrintf(0, filter, txt.str().c_str());
-
-			if (chance >= settings::esp::esp_chance)
-			{
-				settings::esp::visible_only = false;
-
-				/* CHAMS MODES: */
-
-				if (settings::chams::enemymodenew == 0) //Normal
-					settings::chams::enemymodenew = 9; //XQZ
-
-				if (settings::chams::enemymodenew == 1) //Flat
-					settings::chams::enemymodenew = 10; //Flat XQZ
-
-				if (settings::chams::enemymodenew == 2) //Wireframe
-					settings::chams::enemymodenew = 9; //XQZ
-
-				if (settings::chams::enemymodenew == 3) //Glass
-					settings::chams::enemymodenew = 9; //XQZ
-
-				if (settings::chams::enemymodenew == 4) //Metallic
-					settings::chams::enemymodenew = 11; //Metallic XQZ
-
-				if (settings::chams::enemymodenew == 5) //Crystal blue
-					settings::chams::enemymodenew = 9; //XQZ
-
-				if (settings::chams::enemymodenew == 6) //Metal gibs
-					settings::chams::enemymodenew = 9; //XQZ
-
-				if (settings::chams::enemymodenew == 7) //Shards
-					settings::chams::enemymodenew = 9; //XQZ
-
-				if (settings::chams::enemymodenew == 8) //Dev glow
-					settings::chams::enemymodenew = 9; //XQZ
-			}
-			else if (chance < settings::esp::esp_chance)
-			{
-				settings::esp::visible_only = true;
-
-				/* CHAMS MODES: */
-
-				if (settings::chams::enemymodenew == 9) //XQZ
-					settings::chams::enemymodenew = 0; //Normal
-
-				if (settings::chams::enemymodenew == 10) //Flat XQZ
-					settings::chams::enemymodenew = 1; //Flat
-
-				if (settings::chams::enemymodenew == 9) //XQZ
-					settings::chams::enemymodenew = 2; //Wireframe
-
-				if (settings::chams::enemymodenew == 9) //XQZ
-					settings::chams::enemymodenew = 3; //Glass
-
-				if (settings::chams::enemymodenew == 11) //Metallic XQZ
-					settings::chams::enemymodenew = 4; //Metallic
-
-				if (settings::chams::enemymodenew == 9) //XQZ
-					settings::chams::enemymodenew = 5; //Crystal blue
-
-				if (settings::chams::enemymodenew == 9) //XQZ
-					settings::chams::enemymodenew = 6; //Metal gibs
-
-				if (settings::chams::enemymodenew == 9) //XQZ
-					settings::chams::enemymodenew = 7; //Shards
-
-				if (settings::chams::enemymodenew == 9) //XQZ
-					settings::chams::enemymodenew = 8; //Dev glow
-			}
+			m_local.isBombPlantedStatus = false;
+			m_local.AfterPlant = false;
 		}
 		else if (name == FNV("cs_pre_restart") || name == FNV("switch_team") || name == FNV("announce_phase_end") || name == FNV("round_freeze_end"))
 			clantag::restore();

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <string>
 
 enum SendPropType
@@ -123,12 +122,16 @@ inline void RecvProp::SetDataTableProxyFn(DataTableRecvVarProxyFn fn)
 
 class recv_prop_hook
 {
+private:
+	RecvProp* m_property;
+	RecvVarProxyFn m_original_proxy_fn;
 public:
+
 	recv_prop_hook(RecvProp* prop, const RecvVarProxyFn proxy_fn) : m_property(prop), m_original_proxy_fn(prop->m_ProxyFn)
 	{
 		set_proxy_function(proxy_fn);
 	}
-
+	
 	~recv_prop_hook()
 	{
 		m_property->m_ProxyFn = m_original_proxy_fn;
@@ -143,8 +146,4 @@ public:
 	{
 		m_property->m_ProxyFn = proxy_fn;
 	}
-
-private:
-	RecvProp* m_property;
-	RecvVarProxyFn m_original_proxy_fn;
 };

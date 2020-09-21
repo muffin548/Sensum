@@ -9,8 +9,8 @@
 #include "../imgui/imgui.h"
 #include "../valve_sdk/sdk.hpp"
 
-#define TIME_TO_TICKS( dt )	( ( int )( 0.5f + ( float )( dt ) / interfaces::global_vars->interval_per_tick ) )
-#define TICKS_TO_TIME(t) ( interfaces::global_vars->interval_per_tick * (t) )
+#define TIME_TO_TICKS( dt )	( ( int )( 0.5f + ( float )( dt ) / g::global_vars->interval_per_tick ) )
+#define TICKS_TO_TIME(t) ( g::global_vars->interval_per_tick * (t) )
 
 namespace utils
 {
@@ -19,16 +19,22 @@ namespace utils
 
 	bool can_lag(const bool& voice_check = true);
 	float get_interpolation_compensation();
+	long long GetEpochTime();
+	Vector CalcHelpPos(Vector target);
+	Vector CalcDir(const Vector& vAngles);
 
 	bool is_connected();
 	bool is_sniper(int iItemDefinitionIndex);
 	bool IsPlayingMM();
+	bool Insecure();
+	bool IsMMGamemodes();
 	bool IsValveDS();
 
 	std::string get_weapon_name(void* weapon);
 
 	HMODULE get_module(const std::string& name);
 	void* get_export(const char* module_name, const char* export_name);
+	unsigned int GetVirtual(void* class_, unsigned int index);
 	std::uint8_t* pattern_scan(void* module, const char* signature);
 	std::uint8_t* pattern_scan(const char* moduleName, const char* signature);
 
@@ -42,4 +48,10 @@ namespace utils
 	ImU32 to_im32(const Color& color, const float& alpha = 1.f);
 	wchar_t* to_wstring(const char* str);
 	void RankRevealAll();
+
+	class ICommandLine
+	{
+	public:
+		bool FindParameter(const char* param);
+	};
 }

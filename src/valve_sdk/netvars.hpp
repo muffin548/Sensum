@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <map>
 #include "misc/Recv.hpp"
-#include "../helpers/vfunc_hook.h"
+#include "../helpers//fnv.h"
 
 class netvar_manager
 {

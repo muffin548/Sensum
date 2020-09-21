@@ -1,19 +1,19 @@
 #include "sdk.hpp"
-
-#include <optional>
 #include "../helpers/utils.h"
 #include "../helpers/console.h"
-#include "..//glow_helper.h"
+#include "../valve_sdk/interfaces/CGlowObjectManager.h"
+
+#include <optional>
 
 #define STRINGIFY_IMPL(s) #s
 #define STRINGIFY(s)      STRINGIFY_IMPL(s)
 #define PRINT_INTERFACE(name) console::print("%-20s: %p", STRINGIFY(name), name)
 
-namespace interfaces
+namespace g
 {
 	CLocalPlayer local_player;
 
-	CInput* Input = nullptr;
+	CInput* input = nullptr;
 	IMDLCache* mdl_cache = nullptr;
 	ICvar* cvar = nullptr;
 	IPanel* vgui_panel = nullptr;
@@ -42,16 +42,13 @@ namespace interfaces
 	IVEngineVGui* engine_vgui = nullptr;
 	CRender* render = nullptr;
 	c_cs_player_resource** player_resource = nullptr;
-	CHud* Hud = nullptr;
-	CGlowObjectManager* glow_obj_manager = nullptr;
+	CHud* hud_system = nullptr;
 	ILocalize* localize = nullptr;
 	IMemAlloc* mem_alloc = nullptr;
 	IWeaponSystem* weapon_system = nullptr;
 	IFileSystem* file_system = nullptr;
-	CModelRenderSystem* model_render_system = nullptr;
 	IViewRenderBeams* view_render_beams = nullptr;
 	glow_manager_t* glow_manager = nullptr;
-	uintptr_t* g_SpatialPartition = nullptr;
 	IStudioRender* g_studiorender = nullptr;
 
 	ISteamUser* steam_user = nullptr;
@@ -90,23 +87,22 @@ namespace interfaces
 
 	void initialize()
 	{
-		global_vars = **(CGlobalVarsBase * **)(utils::pattern_scan(GLOBAL_VARS) + 1);
-		client_mode = *(IClientMode * *)(utils::pattern_scan(CLIENT_MODE) + 1);
-		Input = *(CInput * *)(utils::pattern_scan(CINPUT) + 1);
-		move_helper = **(IMoveHelper * **)(utils::pattern_scan(MOVE_HELPER) + 2);
-		view_render = *(IViewRender * *)(utils::pattern_scan(VIEW_RENDER) + 1);
-		d3_device = **(IDirect3DDevice9 * **)(utils::pattern_scan(D3D_DEVICE) + 1);
-		client_state = **(CClientState * **)(utils::pattern_scan(CLIENT_STATE) + 1);
+		global_vars = **(CGlobalVarsBase***)(utils::pattern_scan(GLOBAL_VARS) + 1);
+		client_mode = *(IClientMode**)(utils::pattern_scan(CLIENT_MODE) + 1);
+		input = *(CInput**)(utils::pattern_scan(CINPUT) + 1);
+		move_helper = **(IMoveHelper***)(utils::pattern_scan(MOVE_HELPER) + 2);
+		view_render = *(IViewRender**)(utils::pattern_scan(VIEW_RENDER) + 1);
+		d3_device = **(IDirect3DDevice9***)(utils::pattern_scan(D3D_DEVICE) + 1);
+		client_state = **(CClientState***)(utils::pattern_scan(CLIENT_STATE) + 1);
 		local_player = *(CLocalPlayer*)(utils::pattern_scan(LOCAL_PLAYER) + 2);
-		render = *(CRender * *)(utils::pattern_scan(CRENDER) + 7);
-		Hud = *reinterpret_cast<CHud * *>(utils::pattern_scan(CHUD) + 1);
-		player_resource = *reinterpret_cast<c_cs_player_resource * **>(utils::pattern_scan(PLAYER_RESOURCE) + 2);
-		glow_obj_manager = *(CGlowObjectManager * *)(utils::pattern_scan(GLOW_MANAGER) + 3);
-		weapon_system = *(IWeaponSystem * *)(utils::pattern_scan(WEAPON_SYSTEM) + 2);
-		view_render_beams = *(IViewRenderBeams * *)(utils::pattern_scan(VIEW_RENDER_BEAMS) + 1);
-		fire_bullets = *(C_TEFireBullets * *)(utils::pattern_scan(FIRE_BULLETS) + 0x131);
-		game_rules_proxy = **(c_cs_game_rules_proxy * **)(utils::pattern_scan(GAME_RULES_PROXY) + 1);
-		glow_manager = (glow_manager_t*)(*(uintptr_t*)(utils::pattern_scan(GetModuleHandleA("client_panorama.dll"), "0F 11 05 ? ? ? ? 83 C8 01 C7 05 ? ? ? ? 00 00 00 00") + 3));
+		render = *(CRender**)(utils::pattern_scan(CRENDER) + 7);
+		hud_system = *reinterpret_cast<CHud**>(utils::pattern_scan(CHUD) + 1);
+		player_resource = *reinterpret_cast<c_cs_player_resource***>(utils::pattern_scan(PLAYER_RESOURCE) + 2);
+		weapon_system = *(IWeaponSystem**)(utils::pattern_scan(WEAPON_SYSTEM) + 2);
+		view_render_beams = *(IViewRenderBeams**)(utils::pattern_scan(VIEW_RENDER_BEAMS) + 1);
+		fire_bullets = *(C_TEFireBullets**)(utils::pattern_scan(FIRE_BULLETS) + 0x131);
+		game_rules_proxy = **(c_cs_game_rules_proxy***)(utils::pattern_scan(GAME_RULES_PROXY) + 1);
+		glow_manager = (glow_manager_t*)(*(uintptr_t*)(utils::pattern_scan(GetModuleHandleA("client.dll"), "0F 11 05 ? ? ? ? 83 C8 01 C7 05 ? ? ? ? 00 00 00 00") + 3));
 
 		base_client = get_interface<IBaseClientDLL>("client.dll", "VClient018");
 		entity_list = get_interface<IClientEntityList>("client.dll", "VClientEntityList003");
@@ -130,10 +126,9 @@ namespace interfaces
 		input_system = get_interface<IInputSystem>("inputsystem.dll", "InputSystemVersion001");
 		localize = get_interface<ILocalize>("localize.dll", "Localize_001");
 		file_system = get_interface<IFileSystem>("filesystem_stdio.dll", "VFileSystem017");
-		g_SpatialPartition = get_interface<uintptr_t>("engine.dll", "SpatialPartition001");
 		g_studiorender = get_interface<IStudioRender>("studiorender.dll", "VStudioRender026");
 
-		mem_alloc = *(IMemAlloc * *)GetProcAddress(utils::get_module("tier0.dll"), "g_pMemAlloc");
+		mem_alloc = *(IMemAlloc**)GetProcAddress(utils::get_module("tier0.dll"), "g_pMemAlloc");
 
 		const auto _steam_user = get_steam_interface<HSteamUser>("SteamAPI_GetHSteamUser");
 		const auto _steam_pipe = get_steam_interface<HSteamPipe>("SteamAPI_GetHSteamPipe");
@@ -144,12 +139,12 @@ namespace interfaces
 		steam_friends = steam_client->GetISteamFriends(_steam_user, _steam_pipe, "SteamFriends015");
 		steam_http = steam_client->GetISteamHTTP(_steam_user, _steam_pipe, "STEAMHTTP_INTERFACE_VERSION002");
 
-		hud_chat = Hud->FindHudElement<CHudChat>("CHudChat"); //"CCSGO_HudChat"
+		hud_chat = hud_system->FindHudElement<CHudChat>("CHudChat");
 
 #ifdef _DEBUG
 		PRINT_INTERFACE(global_vars);
 		PRINT_INTERFACE(client_mode);
-		PRINT_INTERFACE(Input);
+		PRINT_INTERFACE(input);
 		PRINT_INTERFACE(move_helper);
 		PRINT_INTERFACE(view_render);
 		PRINT_INTERFACE(d3_device);
@@ -182,19 +177,14 @@ namespace interfaces
 		PRINT_INTERFACE(engine_vgui);
 		PRINT_INTERFACE(render);
 		PRINT_INTERFACE(player_resource);
-		PRINT_INTERFACE(Hud);
-		PRINT_INTERFACE(glow_obj_manager);
+		PRINT_INTERFACE(hud_system);
 		PRINT_INTERFACE(g_studiorender);
 		PRINT_INTERFACE(localize);
 		PRINT_INTERFACE(mem_alloc);
 		PRINT_INTERFACE(weapon_system);
 		PRINT_INTERFACE(file_system);
-		PRINT_INTERFACE(model_render_system);
 		PRINT_INTERFACE(view_render_beams);
 		PRINT_INTERFACE(hud_chat);
-		PRINT_INTERFACE(g_SpatialPartition);
 #endif
 	}
 }
-
-namespace g = interfaces; //You dont need now to type interfaces:: , "g::" is shorter,cause why not //MJ409  

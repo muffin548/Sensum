@@ -1,7 +1,7 @@
 #include "features.h"
-#include "../config.h"
-#include "../globals.h"
-#include "../options.hpp"
+#include "../settings/config.h"
+#include "../settings/globals.h"
+#include "../settings/options.hpp"
 #include "../helpers/http.h"
 #include "../helpers/console.h"
 
@@ -87,17 +87,17 @@ namespace skins
 
 	void initialize_kits()
 	{
-		config::load("game-items.json", "", false, [](Json::Value root)
-		{
-			for (auto& item : root)
+		config::load("skin_kits.json", "", false, [](Json::Value root)
 			{
-				std::vector<weapon_kit_t> weapons;
-				for (auto& weapon : item["weapons"])
-					weapons.emplace_back(weapon_kit_t{ weapon["index"].asInt(), weapon["rarity"].asString() });
+				for (auto& item : root)
+				{
+					std::vector<weapon_kit_t> weapons;
+					for (auto& weapon : item["weapons"])
+						weapons.emplace_back(weapon_kit_t{ weapon["index"].asInt(), weapon["rarity"].asString() });
 
-				skin_kits.emplace_back(paint_kit_t{ item["id"].asInt(), item["english"].asString(), weapons });
-			}
-		});
+					skin_kits.emplace_back(paint_kit_t{ item["id"].asInt(), item["english"].asString(), weapons });
+				}
+			});
 	}
 
 	const weapon_info_t* get_weapon_info(const int& defindex)
@@ -132,6 +132,11 @@ namespace skins
 
 	void apply_config_on_attributable_item(c_base_attributable_item* item, const item_setting config, const unsigned xuid_low)
 	{
+		auto _item = reinterpret_cast<c_base_combat_weapon*>(item);
+
+		if (_item)
+			_item->m_iWorldModelIndex() = -1;
+
 		item->m_iItemIDHigh() = -1;
 
 		item->m_iAccountID() = xuid_low;
@@ -170,8 +175,8 @@ namespace skins
 		definition_index = config.definition_override_index;
 
 		// Set the weapon model index -- required for paint kits to work on replacement items after the 29/11/2016 update.
-		item->m_nModelIndex() = interfaces::mdl_info->GetModelIndex(replacement_item->model);
-		item->SetModelIndex(interfaces::mdl_info->GetModelIndex(replacement_item->model));
+		item->m_nModelIndex() = g::mdl_info->GetModelIndex(replacement_item->model);
+		item->SetModelIndex(g::mdl_info->GetModelIndex(replacement_item->model));
 		item->GetClientNetworkable()->PreDataUpdate(0);
 
 		// We didn't override 0, but some actual weapon, that we have data for
@@ -199,12 +204,12 @@ namespace skins
 		if (h == INVALID_EHANDLE_INDEX)
 			return nullptr;
 
-		return static_cast<T*>(interfaces::entity_list->GetClientEntityFromHandle(h));
+		return static_cast<T*>(g::entity_list->GetClientEntityFromHandle(h));
 	}
 
 	CreateClientClassFn get_wearable_create_fn()
 	{
-		auto clazz = interfaces::base_client->GetAllClasses();
+		auto clazz = g::base_client->GetAllClasses();
 		while (fnv::hash_runtime(clazz->m_pNetworkName) != FNV("CEconWearable"))
 			clazz = clazz->m_pNext;
 
@@ -217,7 +222,7 @@ namespace skins
 
 		create_wearable_fn(entry, serial);
 
-		const auto glove = static_cast<c_base_attributable_item*>(interfaces::entity_list->GetClientEntity(entry));
+		const auto glove = static_cast<c_base_attributable_item*>(g::entity_list->GetClientEntity(entry));
 		assert(glove);
 
 		static auto set_abs_origin_addr = utils::pattern_scan(SET_ABS_ORIGIN);
@@ -231,8 +236,8 @@ namespace skins
 
 	bool handle_glove_config(player_info_t player_info)
 	{
-		const auto wearables = interfaces::local_player->m_hMyWearables();
-		const auto glove_config = m_items[interfaces::local_player->m_iTeamNum() == team::team_ct ? GLOVE_CT_SIDE : GLOVE_T_SIDE];
+		const auto wearables = g::local_player->m_hMyWearables();
+		const auto glove_config = m_items[g::local_player->m_iTeamNum() == team::team_ct ? GLOVE_CT_SIDE : GLOVE_T_SIDE];
 		static auto glove_handle = CBaseHandle(0);
 
 		auto glove = get_entity_from_handle<c_base_attributable_item>(wearables[0]);
@@ -247,7 +252,7 @@ namespace skins
 			}
 		}
 
-		if (!interfaces::local_player->IsAlive())
+		if (!g::local_player->IsAlive())
 		{
 			// We are dead but we have a glove, destroy it
 			if (glove)
@@ -264,7 +269,7 @@ namespace skins
 			// We don't have a glove, but we should
 			if (!glove)
 			{
-				const auto entry = interfaces::entity_list->GetHighestEntityIndex() + 1;
+				const auto entry = g::entity_list->GetHighestEntityIndex() + 1;
 				const auto serial = rand() % 0x1000;
 
 				glove = make_glove(entry, serial);
@@ -286,21 +291,21 @@ namespace skins
 
 	void handle()
 	{
-		if (!interfaces::local_player)
+		if (!g::local_player)
 			return;
 
-		const auto player_info = interfaces::local_player->GetPlayerInfo();
+		const auto player_info = g::local_player->GetPlayerInfo();
 		if (!handle_glove_config(player_info))
 			return;
 
-		const auto weapons = interfaces::local_player->m_hMyWeapons();
+		const auto weapons = g::local_player->m_hMyWeapons();
 		for (size_t i = 0; weapons[i].IsValid(); i++)
 		{
-			auto* weapon = (c_base_attributable_item*)interfaces::entity_list->GetClientEntityFromHandle(weapons[i]);
+			auto* weapon = (c_base_attributable_item*)g::entity_list->GetClientEntityFromHandle(weapons[i]);
 			if (!weapon)
 				continue;
 
-			const auto knife_index = interfaces::local_player->m_iTeamNum() == team::team_ct ? WEAPON_KNIFE : WEAPON_KNIFE_T;
+			const auto knife_index = g::local_player->m_iTeamNum() == team::team_ct ? WEAPON_KNIFE : WEAPON_KNIFE_T;
 
 			auto& definition_index = weapon->m_iItemDefinitionIndex();
 			const auto defined_index = is_knife(definition_index) ? knife_index : definition_index;
@@ -315,7 +320,7 @@ namespace skins
 				erase_override_if_exists_by_index(definition_index);
 		}
 
-		const auto view_model = get_entity_from_handle<c_base_view_model>(interfaces::local_player->m_hViewModel());
+		const auto view_model = get_entity_from_handle<c_base_view_model>(g::local_player->m_hViewModel());
 		if (!view_model)
 			return;
 
@@ -327,7 +332,7 @@ namespace skins
 		if (!override_info)
 			return;
 
-		const auto override_model_index = interfaces::mdl_info->GetModelIndex(override_info->model);
+		const auto override_model_index = g::mdl_info->GetModelIndex(override_info->model);
 		view_model->m_nModelIndex() = override_model_index;
 
 		const auto world_model = get_entity_from_handle<c_base_weapon_world_model>(view_model_weapon->m_hWeaponWorldModel());
@@ -340,96 +345,96 @@ namespace skins
 	void load()
 	{
 		config::load("skins.json", "", false, [](Json::Value root)
-		{
-			m_items.clear();
-
-			Json::Value items = root["skins"];
-			if (items.isNull())
-				return;
-
-			for (auto item : items)
 			{
-				auto skin_data = &m_items[item["definition_index"].asInt()];
-				strcpy(skin_data->custom_name, item["custom_name"].asString().c_str());
+				m_items.clear();
 
-				Option::Load(item["enabled"], skin_data->enabled);
-				Option::Load(item["definition_index"], skin_data->definition_index);
-				Option::Load(item["definition_override_index"], skin_data->definition_override_index);
-				Option::Load(item["paint_kit_index"], skin_data->paint_kit_index);
-				Option::Load(item["wear"], skin_data->wear);
-				Option::Load(item["stat_track.enabled"], skin_data->stat_track.enabled);
-				//Option::Load(item["stat_track.counter"], skin_data->stat_track.counter);
-				Option::Load(item["seed"], skin_data->seed);
-			}
-		});
+				Json::Value items = root["skins"];
+				if (items.isNull())
+					return;
+
+				for (auto& item : items)
+				{
+					auto skin_data = &m_items[item["definition_index"].asInt()];
+					strcpy(skin_data->custom_name, item["custom_name"].asString().c_str());
+
+					Option::Load(item["enabled"], skin_data->enabled);
+					Option::Load(item["definition_index"], skin_data->definition_index);
+					Option::Load(item["definition_override_index"], skin_data->definition_override_index);
+					Option::Load(item["paint_kit_index"], skin_data->paint_kit_index);
+					Option::Load(item["wear"], skin_data->wear);
+					Option::Load(item["stat_track.enabled"], skin_data->stat_track.enabled);
+					//Option::Load(item["stat_track.counter"], skin_data->stat_track.counter);
+					Option::Load(item["seed"], skin_data->seed);
+				}
+			});
 	}
 
 	void save()
 	{
 		config::save("skins.json", "", false, []()
-		{
-			Json::Value config;
-
-			Json::Value items;
-			for (auto m_item : m_items)
 			{
-				Json::Value item;
+				Json::Value config;
 
-				item["enabled"] = m_item.second.enabled;
-				item["custom_name"] = std::string(m_item.second.custom_name);
-				item["definition_index"] = m_item.first;
-				item["definition_override_index"] = m_item.second.definition_override_index;
-				item["paint_kit_index"] = m_item.second.paint_kit_index;
-				item["seed"] = m_item.second.seed;
-				item["stat_track.enabled"] = m_item.second.stat_track.enabled; //item["stat_track.counter"] = m_item.second.stat_track.counter;
-				item["wear"] = m_item.second.wear;
+				Json::Value items;
+				for (auto& m_item : m_items)
+				{
+					Json::Value item;
 
-				items.append(item);
-			}
+					item["enabled"] = m_item.second.enabled;
+					item["custom_name"] = std::string(m_item.second.custom_name);
+					item["definition_index"] = m_item.first;
+					item["definition_override_index"] = m_item.second.definition_override_index;
+					item["paint_kit_index"] = m_item.second.paint_kit_index;
+					item["seed"] = m_item.second.seed;
+					item["stat_track.enabled"] = m_item.second.stat_track.enabled; //item["stat_track.counter"] = m_item.second.stat_track.counter;
+					item["wear"] = m_item.second.wear;
 
-			config["skins"] = items;
+					items.append(item);
+				}
 
-			return config;
-		});
+				config["skins"] = items;
+
+				return config;
+			});
 	}
 
-	void LoadStatrack()
+	void load_statrack()
 	{
 		config::load("statrack.json", "", false, [](Json::Value root)
-		{
-			statrack_items.clear();
-
-			Json::Value it = root["statrack"];
-			if (it.isNull())
-				return;
-
-			for (auto item : it)
 			{
-				auto skin_data = &statrack_items[item["definition_index"].asInt()];
-				Option::Load(item["definition_index"], skin_data->definition_index);
-				Option::Load(item["stat_track.counter_new"], skin_data->statrack_new.counter);
-			}
-		});
+				statrack_items.clear();
+
+				Json::Value it = root["statrack"];
+				if (it.isNull())
+					return;
+
+				for (auto& item : it)
+				{
+					auto skin_data = &statrack_items[item["definition_index"].asInt()];
+					Option::Load(item["definition_index"], skin_data->definition_index);
+					Option::Load(item["stat_track.counter_new"], skin_data->statrack_new.counter);
+				}
+			});
 	}
 
-	void SaveStatrack()
+	void save_statrack()
 	{
 		config::save("statrack.json", "", false, []()
-		{
-			Json::Value config;
-
-			Json::Value it;
-			for (auto m_item : statrack_items)
 			{
-				Json::Value item;
-				item["definition_index"] = m_item.first;
-				item["stat_track.counter_new"] = m_item.second.statrack_new.counter;
-				it.append(item);
-			}
+				Json::Value config;
 
-			config["statrack"] = it;
+				Json::Value it;
+				for (auto& m_item : statrack_items)
+				{
+					Json::Value item;
+					item["definition_index"] = m_item.first;
+					item["stat_track.counter_new"] = m_item.second.statrack_new.counter;
+					it.append(item);
+				}
 
-			return config;
-		});
+				config["statrack"] = it;
+
+				return config;
+			});
 	}
 }

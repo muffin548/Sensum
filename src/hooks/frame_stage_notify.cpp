@@ -1,18 +1,17 @@
 #include "hooks.h"
-#include "../globals.h"
-#include "../options.hpp"
+#include "../settings/globals.h"
+#include "../settings/options.hpp"
 #include "../helpers/utils.h"
 #include "../helpers/console.h"
 #include "../features/features.h"
+#include "../features/soundesp.h"
 
 namespace hooks
 {
-	vfunc_hook post_data_update::hook;
-
-	void post_data_update::setup()
+	void post_data_update::call()
 	{
 		static bool was_hooked = false;
-		if (!interfaces::engine_client->IsInGame() || !interfaces::local_player)
+		if (!g::engine_client->IsInGame() || !g::local_player)
 		{
 			was_hooked = false;
 			return;
@@ -23,16 +22,28 @@ namespace hooks
 
 		was_hooked = true;
 
-		const auto network = static_cast<IClientNetworkable*>(interfaces::local_player);
-		if (post_data_update::hook.setup(network))
-			post_data_update::hook.hook_index(post_data_update::index, post_data_update::hooked);
+		const auto network = static_cast<IClientNetworkable*>(g::local_player);
+		post_data_update::setup = reinterpret_cast<void*>(utils::GetVirtual(network, hooks::post_data_update::index));
 	}
 
-	void __stdcall post_data_update::hooked(int update_type)
-	{
-		skins::handle();
-		resolver::handle();
-	
-		hook.get_original<fn>(index)(static_cast<IClientNetworkable*>(interfaces::local_player), update_type);
+	void __stdcall hooks::frame_stage_notify::hooked(EClientFrameStage stage) {
+
+		if (stage == FRAME_RENDER_START) {
+
+		}
+
+		else if (stage == FRAME_NET_UPDATE_POSTDATAUPDATE_START) {
+			skins::handle();
+			resolver::handle();
+		}
+
+		else if (stage == FRAME_NET_UPDATE_START && g::engine_client->IsInGame()) {
+			sound_esp.draw();
+		}
+
+		else if (stage == FRAME_NET_UPDATE_END && g::engine_client->IsInGame()) {
+
+		}
+		original(g::base_client, stage);
 	}
 }

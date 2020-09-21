@@ -1,27 +1,27 @@
 #include "features.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 
 void features::thirdperson()
 {
-	if (!interfaces::local_player)
+	if (!g::local_player)
 		return;
 
-	interfaces::Input->m_fCameraInThirdPerson = globals::binds::thirdperson::enabled && interfaces::local_player->IsAlive();
-	if (!interfaces::Input->m_fCameraInThirdPerson)
+	g::input->m_fCameraInThirdPerson = globals::binds::thirdperson::enabled && g::local_player->IsAlive();
+	if (!g::input->m_fCameraInThirdPerson)
 		return;
 
-	auto weapon = interfaces::local_player->m_hActiveWeapon();
+	auto weapon = g::local_player->m_hActiveWeapon();
 
 	const auto weapon_type = weapon->get_weapon_data()->WeaponType;
 
 	if (weapon_type == WEAPONTYPE_GRENADE)
-		interfaces::Input->m_fCameraInThirdPerson = false;
+		g::input->m_fCameraInThirdPerson = false;
 
 	if ((weapon_type == WEAPONTYPE_PISTOL || weapon_type == WEAPONTYPE_MACHINEGUN || weapon_type == WEAPONTYPE_RIFLE || weapon_type == WEAPONTYPE_SHOTGUN || weapon_type == WEAPONTYPE_SNIPER_RIFLE || weapon_type == WEAPONTYPE_SUBMACHINEGUN) && settings::misc::disable_on_weapon)
-		interfaces::Input->m_fCameraInThirdPerson = false;
+		g::input->m_fCameraInThirdPerson = false;
 
 	QAngle angles;
-	interfaces::engine_client->GetViewAngles(angles);
+	g::engine_client->GetViewAngles(angles);
 
 	QAngle backward(angles.pitch, angles.yaw + 180.f, angles.roll);
 	backward.NormalizeClamp();
@@ -30,18 +30,20 @@ void features::thirdperson()
 	math::angle2vectors(backward, range);
 	range *= 8192.f;
 
-	const auto start = interfaces::local_player->GetEyePos();
+	const auto start = g::local_player->GetEyePos();
 
 	CTraceFilter filter;
-	filter.pSkip = interfaces::local_player;
+	filter.pSkip = g::local_player;
 
 	Ray_t ray;
 	ray.Init(start, start + range);
 
 	trace_t tr;
-	interfaces::engine_trace->trace_ray(ray, MASK_SHOT | CONTENTS_GRATE, &filter, &tr);
+	g::engine_trace->trace_ray(ray, MASK_SHOT | CONTENTS_GRATE, &filter, &tr);
 
 	angles.roll = std::min<int>(start.DistTo(tr.endpos), 150); // 150 is better distance
 
-	interfaces::Input->m_vecCameraOffset = angles;
+	g::input->m_vecCameraOffset = angles;
+
+	//g::local_player->UpdateVisibilityAllEntities(); //TODO: Crashing, UpdateVisibilityAllEntities() has outdated pattern. FIX ME.
 }

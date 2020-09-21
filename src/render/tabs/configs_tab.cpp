@@ -1,8 +1,9 @@
-#include "../render.h"
-#include "../../config.h"
-#include "../../globals.h"
-#include "../../settings.h"
+п»ї#include "../render.h"
+#include "../../settings/config.h"
+#include "../../settings/globals.h"
+#include "../../settings/settings.h"
 #include "../../helpers/notifies.h"
+#include "../../features/features.h"
 
 extern void bind_button(const char* label, int& key);
 
@@ -35,136 +36,144 @@ namespace render
 
 			if (!is_loaded)
 			{
-				config::cache("settings");
+				config::cache("configs");
 
 				is_loaded = true;
 			}
 
-			child(___("New Config", u8"Новая конфигурация"), []()
-			{
-				ImGui::InputText("##filename", filename, 32);
-
-				if (ImGui::Button(___("Create", u8"Создать"), button_size))
+			child("New Config", []()
 				{
-					if (strlen(filename) == 0)
+					ImGui::InputText("##filename", filename, 32);
+
+					if (ImGui::Button("Create", button_size))
 					{
-						notifies::push(___("Enter config name", u8"Укажите имя конфига"), notify_state_s::warning_state);
-					}
-					else
-					{
-						settings::save(std::string(filename));
-						memset(filename, 0, 32);
-						is_loaded = false;
-
-						notifies::push(___("Config created", u8"Конфиг создан"));
-
-						globals::settings = currentName;
-						globals::save();
-					}
-				}
-
-				separator(___("Some Actions", u8"Управление"));
-
-				if (!currentName.empty())
-				{
-					ImGui::InputText("##currentname", current_loaded_config, 32);
-
-					if (ImGui::Button(___("Rename", u8"Переименовать"), button_size))
-					{
-						if (strlen(current_loaded_config) == 0)
+						if (strlen(filename) == 0)
 						{
-							notifies::push(___("Enter new config name", u8"Укажите новое имя конфига"), notify_state_s::warning_state);
+							notifies::push("Enter config name", notify_state_s::warning_state);
 						}
 						else
 						{
-							settings::load(currentName);
-							config::remove(currentName, "settings");
-
-							currentName = std::string(current_loaded_config);
-							settings::save(currentName);
+							settings::save(std::string(filename));
+							memset(filename, 0, 32);
 							is_loaded = false;
 
-							notifies::push(___("Config renamed", u8"Конфиг переименован"));
+							notifies::push("Config created");
 
 							globals::settings = currentName;
 							globals::save();
 						}
 					}
 
-					if (ImGui::Button(___("Load", u8"Загрузить"), button_size))
+					separator("Some Actions");
+
+					if (!currentName.empty())
 					{
-						settings::load(currentName);
+						ImGui::InputText("##currentname", current_loaded_config, 32);
 
-						globals::settings = currentName;
-						globals::save();
-
-						notifies::push(___("Config loaded", u8"Конфиг загружен"));
-					}
-
-					if (ImGui::Button(___("Save", u8"Сохранить"), button_size))
-					{
-						settings::save(currentName);
-
-						globals::settings = currentName;
-						globals::save();
-
-						notifies::push(___("Config saved", u8"Конфиг сохранен"), notify_state_s::success_state);
-					}
-
-					if (ImGui::Button(___("Remove", u8"Удалить"), button_size))
-					{
-						if (config::remove(currentName, "settings"))
+						if (ImGui::Button("Rename", button_size))
 						{
-							currentName.clear();
-							is_loaded = false;
-
-							notifies::push(___("Config removed", u8"Конфиг удален"), notify_state_s::success_state);
-						}
-						else
-						{
-							notifies::push(___("Something went wrong", u8"Не удалось удалить конфиг"), notify_state_s::warning_state);
-						}
-					}
-				}
-			});
-
-			ImGui::NextColumn();
-
-			child(___("Configs", u8"Конфигурации"), []()
-			{
-				if (!render::fonts::configs_list)
-					return;
-
-				ImGui::PushFont(render::fonts::configs_list);
-				{
-					ImGui::ListBoxHeader("##configs", get_listbox_size(0.f, 26.f));
-					{
-						for (auto& config : config::cached["settings"])
-						{
-							if (selectable(config.first.c_str(), config.first == currentName))
+							if (strlen(current_loaded_config) == 0)
 							{
-								strcpy(current_loaded_config, config.first.c_str());
-								currentName = config.first;
+								notifies::push("Enter new config name", notify_state_s::warning_state);
+							}
+							else
+							{
+								settings::load(currentName);
+								config::remove(currentName, "configs");
+
+								currentName = std::string(current_loaded_config);
+								settings::save(currentName);
+								is_loaded = false;
+
+								notifies::push("Config renamed");
+
+								globals::settings = currentName;
+								globals::save();
+							}
+						}
+
+						if (ImGui::Button("Load", button_size))
+						{
+							settings::load(currentName);
+
+							globals::load();
+
+							skins::load();
+
+							notifies::push("Config loaded");
+						}
+
+						ImGui::NewLine();
+						
+						if (ImGui::Button("Save", button_size))
+						{
+							settings::save(currentName);
+
+							globals::settings = currentName;
+							globals::save();
+
+							skins::save();
+
+							notifies::push("Config saved", notify_state_s::success_state);
+						}
+
+						ImGui::NewLine();
+
+						if (ImGui::Button("Remove", button_size))
+						{
+							if (config::remove(currentName, "configs"))
+							{
+								currentName.clear();
+								is_loaded = false;
+
+								notifies::push("Config removed", notify_state_s::success_state);
+							}
+							else
+							{
+								notifies::push("Something went wrong", notify_state_s::warning_state);
 							}
 						}
 					}
-					ImGui::ListBoxFooter();
-				}
-				ImGui::PopFont();
-
-				if (ImGui::Button(___("Refresh", u8"Обновить список"), button_size))
-					is_loaded = false;
-			});
+				});
 
 			ImGui::NextColumn();
 
-			child(___("Binds", u8"Загрузка по кнопке"), []()
-			{
-				checkbox("Show notify when loaded", u8"Уведомлять при загрузке", &globals::binds::notify_when_loaded);
+			child("Configs", []()
+				{
+					if (!render::fonts::configs_list)
+						return;
 
-				for (auto& config : config::cached["settings"])
-					bind_button(config.first.c_str(), globals::binds::configs[config.first]);
-			});
+					ImGui::PushFont(render::fonts::configs_list);
+					{
+						ImGui::ListBoxHeader("##configs", get_listbox_size(0.f, 26.f));
+						{
+							for (auto& config : config::cached["configs"])
+							{
+								if (selectable(config.first.c_str(), config.first == currentName))
+								{
+									strcpy(current_loaded_config, config.first.c_str());
+									currentName = config.first;
+								}
+							}
+						}
+						ImGui::ListBoxFooter();
+					}
+					ImGui::PopFont();
+
+					if (ImGui::Button("Refresh", button_size))
+						is_loaded = false;
+				});
+
+			ImGui::NextColumn();
+
+			child("Binds & Misc", []()
+				{
+					checkbox("Show notify when loaded", &globals::binds::notify_when_loaded);
+					checkbox("ESP while in menu", &globals::esp_menu_opened);
+					
+					for (auto& config : config::cached["configs"])
+						bind_button(config.first.c_str(), globals::binds::configs[config.first]);
+				});
 		}
 	}
 }

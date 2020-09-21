@@ -1,5 +1,5 @@
 #include "../render.h"
-#include "../../globals.h"
+#include "../../settings/globals.h"
 
 namespace render
 {
@@ -26,25 +26,25 @@ namespace render
 			auto is_first = true;
 			const std::vector<const char*> ranks =
 			{
-				___("Unknown", u8"Неизвестно"),
-				___("Silver I", u8"Серебро - I"),
-				___("Silver II", u8"Серебро - II"),
-				___("Silver III", u8"Серебро - III"),
-				___("Silver IV", u8"Серебро - IV"),
-				___("Silver Elite", u8"Серебро - Элита"),
-				___("Silver Elite Master", u8"Серебро - Великий Магистр"),
-				___("Gold Nova I", u8"Золотая Звезда - I"),
-				___("Gold Nova II", u8"Золотая Звезда - II"),
-				___("Gold Nova III", u8"Золотая Звезда - III"),
-				___("Gold Nova Master", u8"Золотая Звезда - Магистр"),
-				___("Master Guardian I", u8"Магистр-хранитель - I"),
-				___("Master Guardian II", u8"Магистр-хранитель - II"),
-				___("Master Guardian Elite", u8"Магистр-хранитель - Элита"),
-				___("Distinguished Master Guardian", u8"Заслуженный Магистр-хранитель"),
-				___("Legendary Eagle", u8"Легендарный Беркут"),
-				___("Legendary Eagle Master", u8"Легендарный Беркут-магистр"),
-				___("Supreme Master First Class", u8"Великий Магистр Высшего Ранга"),
-				___("The Global Elite", u8"Всемирная Элита"),
+				"Unranked",
+				"Silver I",
+				"Silver II",
+				"Silver III",
+				"Silver IV",
+				"Silver Elite",
+				"Silver Elite Master",
+				"Gold Nova I",
+				"Gold Nova II",
+				"Gold Nova III",
+				"Gold Nova Master",
+				"Master Guardian I",
+				"Master Guardian II",
+				"Master Guardian Elite",
+				"Distinguished Master Guardian",
+				"Legendary Eagle",
+				"Legendary Eagle Master",
+				"Supreme Master First Class",
+				"The Global Elite"
 			};
 
 			for (const auto& item : list)
@@ -98,36 +98,36 @@ namespace render
 			columns(5);
 			{
 				ImGui::SetColumnWidth(-1, 200.f);
-				ImGui::Text(___("Name", u8"Имя"));
+				ImGui::Text("Name");
 
 				ImGui::NextColumn();
 
 				ImGui::SetColumnWidth(-1, 60.f);
-				ImGui::Text(___("Money", u8"Деньги"));
+				ImGui::Text("Money");
 
 				ImGui::NextColumn();
 
 				ImGui::SetColumnWidth(-1, 60.f);
-				ImGui::Text(___("Wins", u8"Победы"));
+				ImGui::Text("Wins");
 
 				ImGui::NextColumn();
 
 				ImGui::SetColumnWidth(-1, 60.f);
-				ImGui::Text(___("Damage", u8"Дамаг"));
+				ImGui::Text("Damage");
 
 				ImGui::NextColumn();
 
-				ImGui::Text(___("Rank", u8"Звание"));
+				ImGui::Text("Rank");
 			}
 			columns(1);
 
 			list.clear();
 
-			auto player_resource = *interfaces::player_resource;
+			auto player_resource = *g::player_resource;
 			if (!player_resource)
 				return;
 
-			for (int i = 1; i < interfaces::engine_client->GetMaxClients(); ++i)
+			for (int i = 1; i < g::engine_client->GetMaxClients(); ++i)
 			{
 				auto* player = c_base_player::GetPlayerByIndex(i);
 				if (!player || !player->IsPlayer())

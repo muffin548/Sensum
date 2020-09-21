@@ -119,9 +119,9 @@ public:
 
 class CClientState {
 public:
-	void ForceFullUpdate() {
+	/*void ForceFullUpdate() {
 		*reinterpret_cast<int*>(std::uintptr_t(this) + 0x174) = -1;
-	}
+	}*/
 
 	char pad_0000[156];             //0x0000
 	INetChannel* m_NetChannel;      //0x009C
@@ -159,6 +159,10 @@ public:
 	char pad_4CC0[80];              //0x4CC0
 	QAngle viewangles;              //0x4D10
 	char pad_4D1C[208];             //0x4D1C
+
+	void ForceFullUpdate() {
+		m_nDeltaTick = -1;
+	}
 }; //Size: 0x4D1C
 
 #pragma pack(pop)

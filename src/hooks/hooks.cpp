@@ -1,5 +1,5 @@
 #include "hooks.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../render/render.h"
 #include "../helpers/utils.h"
 #include "../helpers/console.h"
@@ -7,13 +7,11 @@
 #include "../helpers/notifies.h"
 #include "../features/features.h"
 #include "c_game_event_listener.h"
-#include "..//Chams.h"
-#include "..//HitPossitionHelper.h"
-#include "..//runtime_saver.h"
+#include "../features/Chams.h"
+#include "../helpers/HitPossitionHelper.h"
+#include "../helpers/runtime_saver.h"
 #include "..//jsoncpp/json.h"
 #include "..//helpers/input.h"
-
-using namespace blackbone;
 
 static CCSGOPlayerAnimState g_AnimState;
 
@@ -21,123 +19,159 @@ std::map<int, item_setting> m_items = { };
 
 namespace hooks
 {
-	vfunc_hook d3d9::hook;
-	vfunc_hook client_mode::hook;
-	vfunc_hook sound_hook::hook;
-	vfunc_hook vgui_panel::hook;
-	vfunc_hook renderview::hook;
-	vfunc_hook events::hook;
-	vfunc_hook engine_mode::hook;
-	vfunc_hook find_mdl_override::hook;
-
 	c_game_event_listener* event_listener;
 
-	template<typename Structure>
-	bool set_hook(void* _interface, call_order call_order = call_order::HookFirst, return_method return_type = return_method::UseOriginal)
+	void init()
 	{
-		const auto address = (*reinterpret_cast<uintptr_t * *>(_interface))[Structure::index];
-		auto ptr = brutal_cast<Structure::fn>(address);
-		const auto res = Structure::hook.Hook(ptr, &Structure::hooked, call_order, return_type);
+		if (!utils::Insecure())
+		{
+			sequence::hook = new recv_prop_hook(c_base_view_model::m_nSequence(), sequence::hooked);
+		}
+		end_scene::setup = reinterpret_cast<void*>(utils::GetVirtual(g::d3_device, hooks::end_scene::index));
+		create_move::setup = reinterpret_cast<void*>(utils::GetVirtual(g::client_mode, hooks::create_move::index));
+		reset::setup = reinterpret_cast<void*>(utils::GetVirtual(g::d3_device, hooks::reset::index));
+		paint_traverse::setup = reinterpret_cast<void*>(utils::GetVirtual(g::vgui_panel, hooks::paint_traverse::index));
+		override_view::setup = reinterpret_cast<void*>(utils::GetVirtual(g::client_mode, hooks::override_view::index));
+		find_mdl::setup = reinterpret_cast<void*>(utils::GetVirtual(g::mdl_cache, hooks::find_mdl::index));
+		scene_end::setup = reinterpret_cast<void*>(utils::GetVirtual(g::render_view, hooks::scene_end::index));
+		emit_sound::setup = reinterpret_cast<void*>(utils::GetVirtual(g::engine_sound, hooks::emit_sound::index));
+		is_connected::setup = reinterpret_cast<void*>(utils::GetVirtual(g::engine_client, hooks::is_connected::index));;
+		post_screen_effects::setup = reinterpret_cast<void*>(utils::GetVirtual(g::client_mode, hooks::post_screen_effects::index));
+		frame_stage_notify::setup = reinterpret_cast<void*>(utils::GetVirtual(g::base_client, hooks::frame_stage_notify::index));
+		draw_model_execute::setup = reinterpret_cast<void*>(utils::GetVirtual(g::mdl_render, hooks::draw_model_execute::index));
+		check_file_crc_server::setup = reinterpret_cast<void*>(utils::pattern_scan(GetModuleHandleA(xorstr_("engine.dll")), xorstr_("55 8B EC 81 EC ? ? ? ? 53 8B D9 89 5D F8 80")));
+		loose_file_allowed::setup = reinterpret_cast<void*>(utils::GetVirtual(g::file_system, hooks::loose_file_allowed::index));
+		
+		if (MH_Initialize() != MH_OK) {
+			MessageBoxA(NULL, "Failed to initialize Minhook.", MB_OK, MB_ICONERROR);
+		}
 
-		return res;
-	}
+		if (MH_CreateHook(end_scene::setup, &hooks::end_scene::hooked, reinterpret_cast<void**>(&end_scene::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - DirectX: End Scene", MB_OK, MB_ICONERROR);
+		}
 
-	template<typename Structure>
-	void set_vmt_hook(void* ptr, const std::string& module_name = "")
-	{
-		if (module_name.empty())
-			Structure::hook.setup(ptr);
-		else
-			Structure::hook.setup(ptr, module_name.c_str());
+		if (MH_CreateHook(create_move::setup, &hooks::create_move::hooked, reinterpret_cast<void**>(&create_move::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Create Move", MB_OK, MB_ICONERROR);
+		}
 
-		Structure::hook.hook_index(Structure::index, Structure::hooked);
-	}
+		if (MH_CreateHook(reset::setup, &hooks::reset::hooked, reinterpret_cast<void**>(&reset::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - DirectX: Reset", MB_OK, MB_ICONERROR);
+		}
 
-	void initialize()
-	{
-		sequence::hook = new recv_prop_hook(c_base_view_model::m_nSequence(), sequence::hooked);
+		if (MH_CreateHook(paint_traverse::setup, &hooks::paint_traverse::hooked, reinterpret_cast<void**>(&paint_traverse::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Paint Traverse", MB_OK, MB_ICONERROR);
+		}
 
-#ifndef _DEBUG
-		set_hook<dispatch_user_message>(interfaces::base_client, call_order::HookLast);
-#endif
+		if (MH_CreateHook(override_view::setup, &hooks::override_view::hooked, reinterpret_cast<void**>(&override_view::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Override View", MB_OK, MB_ICONERROR);
+		}
 
-		client_mode::hook.setup(interfaces::client_mode, xorstr_("client.dll"));
-		client_mode::hook.hook_index(client_mode::override_view::index, client_mode::override_view::hooked);
-		client_mode::hook.hook_index(client_mode::create_move_shared::index, client_mode::create_move_shared::hooked);
-		client_mode::hook.hook_index(client_mode::post_screen_effects::index, client_mode::post_screen_effects::hooked);
+		if (MH_CreateHook(is_connected::setup, &hooks::is_connected::hooked, reinterpret_cast<void**>(&is_connected::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Is Connected", MB_OK, MB_ICONERROR);
+		}
 
-		d3d9::hook.setup(interfaces::d3_device);
-		d3d9::hook.hook_index(d3d9::reset::index, d3d9::reset::hooked);
-		d3d9::hook.hook_index(d3d9::end_scene::index, d3d9::end_scene::hooked);
-		d3d9::hook.hook_index(d3d9::draw_indexed_primitive::index, d3d9::draw_indexed_primitive::hooked);
+		if (MH_CreateHook(post_screen_effects::setup, &hooks::post_screen_effects::hooked, reinterpret_cast<void**>(&post_screen_effects::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Post Screen Effects", MB_OK, MB_ICONERROR);
+		}
 
-		vgui_panel::hook.setup(interfaces::vgui_panel, xorstr_("vgui2.dll"));
-		vgui_panel::hook.hook_index(vgui_panel::paint_traverse::index, vgui_panel::paint_traverse::hooked);
+		if (MH_CreateHook(emit_sound::setup, &hooks::emit_sound::hooked, reinterpret_cast<void**>(&emit_sound::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Emit Sound", MB_OK, MB_ICONERROR);
+		}
 
-		sound_hook::hook.setup(interfaces::engine_sound, xorstr_("engine.dll"));
-		sound_hook::hook.hook_index(sound_hook::emit_sound1::index, sound_hook::emit_sound1::hooked);
+		if (MH_CreateHook(scene_end::setup, &hooks::scene_end::hooked, reinterpret_cast<void**>(&scene_end::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Scene End", MB_OK, MB_ICONERROR);
+		}
 
-		renderview::hook.setup(interfaces::render_view, xorstr_("engine.dll"));
-		renderview::hook.hook_index(renderview::scene_end::index, renderview::scene_end::hooked);
+		if (MH_CreateHook(find_mdl::setup, &hooks::find_mdl::hooked, reinterpret_cast<void**>(&find_mdl::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Find MDL", MB_OK, MB_ICONERROR);
+		}
 
-		events::hook.setup(interfaces::game_events, xorstr_("engine.dll"));
-		events::hook.hook_index(events::fire_event::index, events::fire_event::hooked);
+		if (MH_CreateHook(frame_stage_notify::setup, &hooks::frame_stage_notify::hooked, reinterpret_cast<void**>(&frame_stage_notify::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Frame Stage Notify", MB_OK, MB_ICONERROR);
+		}
 
-		engine_mode::hook.setup(g::engine_client);
-		engine_mode::hook.hook_index(engine_mode::IsConnected::index, engine_mode::IsConnected::hooked);
+		if (MH_CreateHook(draw_model_execute::setup, &hooks::draw_model_execute::hooked, reinterpret_cast<void**>(&draw_model_execute::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Draw Model Execute", MB_OK, MB_ICONERROR);
+		}
 
-		find_mdl_override::hook.setup(g::mdl_cache);
-		find_mdl_override::hook.hook_index(find_mdl_override::find_mdl::index, find_mdl_override::find_mdl::hooked);
+		if (MH_CreateHook(check_file_crc_server::setup, &hooks::check_file_crc_server::hooked, reinterpret_cast<void**>(&check_file_crc_server::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated pattern - Check File CRC Server", MB_OK, MB_ICONERROR);
+		}
 
-		//set_vmt_hook<fire_bullets>(interfaces::fire_bullets, xorstr_("client.dll"));
-		//set_vmt_hook<retrieve_message>(interfaces::game_coordinator);
+		if (MH_CreateHook(loose_file_allowed::setup, &hooks::loose_file_allowed::hooked, reinterpret_cast<void**>(&loose_file_allowed::original)) != MH_OK) {
+			MessageBoxA(NULL, "Outdated index - Loose File Allowed", MB_OK, MB_ICONERROR);
+		}
+
+		if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
+			MessageBoxA(NULL, "Failed to enable hooks.", MB_OK, MB_ICONERROR);
+		}
 
 		event_listener = new c_game_event_listener();
-		interfaces::game_events->add_listener(event_listener, xorstr_("game_newmap"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("switch_team"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("player_hurt"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("bullet_impact"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("item_purchase"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("player_spawned"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("cs_pre_restart"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("round_freeze_end"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("announce_phase_end"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("round_start"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("player_footstep"), false);
-		interfaces::game_events->add_listener(event_listener, xorstr_("player_death"), false);
+		g::game_events->add_listener(event_listener, xorstr_("game_newmap"), false);
+		g::game_events->add_listener(event_listener, xorstr_("switch_team"), false);
+		g::game_events->add_listener(event_listener, xorstr_("player_hurt"), false);
+		g::game_events->add_listener(event_listener, xorstr_("bullet_impact"), false);
+		g::game_events->add_listener(event_listener, xorstr_("item_purchase"), false);
+		g::game_events->add_listener(event_listener, xorstr_("player_spawned"), false);
+		g::game_events->add_listener(event_listener, xorstr_("cs_pre_restart"), false);
+		g::game_events->add_listener(event_listener, xorstr_("round_freeze_end"), false);
+		g::game_events->add_listener(event_listener, xorstr_("announce_phase_end"), false);
+		g::game_events->add_listener(event_listener, xorstr_("round_start"), false);
+		g::game_events->add_listener(event_listener, xorstr_("player_footstep"), false);
+		g::game_events->add_listener(event_listener, xorstr_("player_death"), false);
+
+		g::cvar->ConsoleColorPrintf(Color::White, "hooks::init() Done!\n");
+
+		//convars::sensum_i_dont_speak_nn_lang = new ConVar("sensum_i_dont_speak_nn_lang", "0", FCVAR_RELEASE, "We dont speak nn language, sorry not sorry.");
+		//convars::con = new ConCommand("bhop", reinterpret_cast<FnCommandCallbackV1_t>(base), "base", FCVAR_RELEASE);
+
+		//g::cvar->RegisterConCommand(convars::sensum_mute_russians);
+		//g::cvar->RegisterConCommand(convars::sensum_i_dont_speak_nn_lang);
 	}
 
 	void destroy()
 	{
-		interfaces::game_events->remove_listener(event_listener);
-		retrieve_message::hook.unhook_all();
-		fire_bullets::hook.unhook_all();
-		d3d9::hook.unhook_all();
-		client_mode::hook.unhook_all();
-		vgui_panel::hook.unhook_all();
-		sound_hook::hook.unhook_all();
-		renderview::hook.unhook_all();
-		events::hook.unhook_all();
-		engine_mode::hook.unhook_all();
-		find_mdl_override::hook.unhook_all();
+		MH_Uninitialize();
+		MH_DisableHook(MH_ALL_HOOKS);
 
-		delete sequence::hook;
+		g::game_events->remove_listener(event_listener);
+
+		if (!utils::Insecure())
+			delete sequence::hook;
+
+		//g::cvar->UnregisterConCommand(convars::sensum_mute_russians);
+		//g::cvar->UnregisterConCommand(convars::sensum_i_dont_speak_nn_lang);
+
+		//delete convars::sensum_mute_russians;
+		//delete convars::sensum_i_dont_speak_nn_lang;
 	}
 
-	MDLHandle_t __fastcall find_mdl_override::find_mdl::hooked(void* ecx, void* edx, char* FilePath)
+	void __fastcall check_file_crc_server::hooked(void* ecx, void* edx)
 	{
-		auto original = hook.get_original<fn>(index);
+		return;
+	}
 
+	bool __fastcall loose_file_allowed::hooked(void* ecx, void* edx)
+	{
+		return true;
+	}
+
+	MDLHandle_t __fastcall find_mdl::hooked(void* ecx, void* edx, char* FilePath)
+	{
 		/*if (strstr(FilePath, "arms"))
-			sprintf(FilePath, "models/player/custom_player/kuristaja/nanosuit/nanosuit_arms.mdl");*/
+			  sprintf(FilePath, "models/player/custom_player/kuristaja/nanosuit/nanosuit_arms.mdl");*/
+
+		/*if (strstr(FilePath, "ctm_"))
+			  sprintf(FilePath, "models/player/custom_player/kuristaja/nanosuit/nanosuitv3.mdl");
+
+		  if (strstr(FilePath, "tm_"))
+			  sprintf(FilePath, "models/player/custom_player/kuristaja/nanosuit/nanosuitv3.mdl");*/
 
 		return original(ecx, FilePath);
 	}
 
-	void __stdcall client_mode::override_view::hooked(CViewSetup* view)
+	void __stdcall override_view::hooked(CViewSetup* view)
 	{
-		static const auto original = hook.get_original<fn>(index);
-
 		no_flash::handle();
 		no_smoke::handle();
 		clantag::animate();
@@ -145,46 +179,40 @@ namespace hooks
 
 		features::thirdperson();
 
-		if (!interfaces::engine_client->IsConnected() || !interfaces::engine_client->IsInGame())
-			return original(interfaces::client_mode, view);
+		if (!g::engine_client->IsConnected() || !g::engine_client->IsInGame())
+			return original(g::client_mode, view);
 
 		if (!globals::view_matrix::has_offset)
 		{
 			globals::view_matrix::has_offset = true;
-			globals::view_matrix::offset = (reinterpret_cast<DWORD>(&interfaces::engine_client->WorldToScreenMatrix()) + 0x40);
+			globals::view_matrix::offset = (reinterpret_cast<DWORD>(&g::engine_client->WorldToScreenMatrix()) + 0x40);
 		}
 
 		if (!g::local_player->m_bIsScoped())
 			view->fov = settings::misc::debug_fov;
 
-		if (globals::binds::fake_duck > 0 && input_system::is_key_down(globals::binds::fake_duck))
-		{
-			view->origin.z = g::local_player->GetAbsOrigin().z + 64.f;
-		}
-
-		original(interfaces::client_mode, view);
+		original(g::client_mode, view);
 	}
 
-	void __stdcall vgui_panel::paint_traverse::hooked(vgui::VPANEL panel, bool forceRepaint, bool allowForce)
+	void __stdcall paint_traverse::hooked(vgui::VPANEL panel, bool forceRepaint, bool allowForce)
 	{
 		static auto panelId = vgui::VPANEL{ 0 };
-		static const auto original = hook.get_original<fn>(index);
 
-		if (g::engine_client->IsInGame() && g::engine_client->IsConnected() && settings::misc::noscope && !strcmp("HudZoom", interfaces::vgui_panel->GetName(panel)))
+		if (g::engine_client->IsInGame() && g::engine_client->IsConnected() && settings::misc::noscope && !strcmp("HudZoom", g::vgui_panel->GetName(panel)))
 			return;
 
 		if (settings::misc::smoke_helper)
+		{
 			visuals::DrawRing3D();
+			visuals::DrawRing3DPopflash();
+		}
 
-		if (settings::visuals::choke)
-			visuals::Choke();
-
-		for (int i = 1; i < interfaces::entity_list->GetHighestEntityIndex(); i++) {
-			auto entity = reinterpret_cast<c_planted_c4*>(interfaces::entity_list->GetClientEntity(i));
+		for (int i = 1; i < g::entity_list->GetHighestEntityIndex(); i++) {
+			auto entity = reinterpret_cast<c_planted_c4*>(g::entity_list->GetClientEntity(i));
 
 			if (entity) {
 				auto client_class = entity->GetClientClass();
-				auto model_name = interfaces::mdl_info->GetModelName(entity->GetModel());
+				auto model_name = g::mdl_info->GetModelName(entity->GetModel());
 
 				if (client_class->m_ClassID == EClassId::CPlantedC4 && entity->m_bBombTicking() && !entity->m_bBombDefused()) {
 					visuals::bomb_esp(entity);
@@ -192,18 +220,17 @@ namespace hooks
 			}
 		}
 
-		original(interfaces::vgui_panel, panel, forceRepaint, allowForce);
+		original(g::vgui_panel, panel, forceRepaint, allowForce);
 
 		if (!panelId)
 		{
-			const auto panelName = interfaces::vgui_panel->GetName(panel);
+			const auto panelName = g::vgui_panel->GetName(panel);
 
-			if (!strcmp(panelName, "FocusOverlayPanel")) 
+			if (!strcmp(panelName, "FocusOverlayPanel"))
 				panelId = panel;
 		}
 		else if (panelId == panel)
 		{
-			//Ignore 50% cuz it called very often
 			static bool bSkip = false;
 			bSkip = !bSkip;
 
@@ -215,20 +242,16 @@ namespace hooks
 		}
 	}
 
-	void __stdcall sound_hook::emit_sound1::hooked(IRecipientFilter& filter, int iEntIndex, int iChannel, const char* pSoundEntry, unsigned int nSoundEntryHash, const char* pSample, float flVolume, int nSeed, float flAttenuation, int iFlags, int iPitch, const Vector* pOrigin, const Vector* pDirection, void* pUtlVecOrigins, bool bUpdatePositions, float soundtime, int speakerentity, int unk)
+	void __stdcall emit_sound::hooked(IRecipientFilter& filter, int iEntIndex, int iChannel, const char* pSoundEntry, unsigned int nSoundEntryHash, const char* pSample, float flVolume, int nSeed, float flAttenuation, int iFlags, int iPitch, const Vector* pOrigin, const Vector* pDirection, void* pUtlVecOrigins, bool bUpdatePositions, float soundtime, int speakerentity, int unk)
 	{
-		static const auto original = hook.get_original<fn>(index);
-
 		if (!strcmp(pSoundEntry, "UIPanorama.popup_accept_match_beep")) {
-			static auto fnAccept = reinterpret_cast<bool(__stdcall*)(const char*)>(utils::pattern_scan(GetModuleHandleA("client_panorama.dll"), "55 8B EC 83 E4 F8 8B 4D 08 BA ? ? ? ? E8 ? ? ? ? 85 C0 75 12"));
+			static auto fnAccept = reinterpret_cast<bool(__stdcall*)(const char*)>(utils::pattern_scan(GetModuleHandleA("client.dll"), "55 8B EC 83 E4 F8 8B 4D 08 BA ? ? ? ? E8 ? ? ? ? 85 C0 75 12"));
 
 			HWND window = FindWindow(NULL, L"Counter-Strike: Global Offensive");
 
 			if (fnAccept) {
 				fnAccept("");
 
-				//This will flash the CSGO window on the taskbar
-				//so we know a game was found (you cant hear the beep sometimes cause it auto-accepts too fast)
 				FLASHWINFO fi;
 				fi.cbSize = sizeof(FLASHWINFO);
 				fi.hwnd = window;
@@ -239,13 +262,11 @@ namespace hooks
 			}
 		}
 
-		original(interfaces::engine_sound, filter, iEntIndex, iChannel, pSoundEntry, nSoundEntryHash, pSample, flVolume, nSeed, flAttenuation, iFlags, iPitch, pOrigin, pDirection, pUtlVecOrigins, bUpdatePositions, soundtime, speakerentity, unk);
+		original(g::engine_sound, filter, iEntIndex, iChannel, pSoundEntry, nSoundEntryHash, pSample, flVolume, nSeed, flAttenuation, iFlags, iPitch, pOrigin, pDirection, pUtlVecOrigins, bUpdatePositions, soundtime, speakerentity, unk);
 	}
 
-	void __fastcall renderview::scene_end::hooked(IVRenderView*& view)
+	void __fastcall scene_end::hooked(IVRenderView*& view)
 	{
-		static const auto original = hook.get_original<fn>(index);
-
 		Chams::Get().OnSceneEnd();
 		visuals::more_chams();
 
@@ -258,79 +279,26 @@ namespace hooks
 			return;
 	}
 
-	int __stdcall client_mode::post_screen_effects::hooked(int value)
+	void __stdcall draw_model_execute::hooked(IMatRenderContext* context, const DrawModelState_t& state, const ModelRenderInfo_t& info, matrix3x4_t* bone)
 	{
-		static auto original = hook.get_original<fn>(index);
-
-		visuals::glow();
-
-		if (settings::glow::glowOverride)
-			visuals::glow_override();
-
-		return original(interfaces::client_mode, value);
+		original(g::mdl_render, context, &state, &info, bone);
 	}
 
-	bool __stdcall engine_mode::IsConnected::hooked()
+	int __stdcall post_screen_effects::hooked(int value)
 	{
-		auto original = hook.get_original<fn>(index);
+		visuals::glow();
 
-		static void* force_inventory_open = utils::pattern_scan(("client_panorama.dll"), "75 04 B0 01 5F") - 2;
+		return original(g::client_mode, value);
+	}
+
+	bool __stdcall is_connected::hooked()
+	{
+		static void* force_inventory_open = utils::pattern_scan(("client.dll"), "75 04 B0 01 5F") - 2;
 
 		if (_ReturnAddress() == force_inventory_open && settings::misc::force_inventory_open) {
 			return false;
 		}
 
 		return original(g::engine_client);
-	}
-
-	bool __stdcall events::fire_event::hooked(IGameEvent* pEvent)
-	{
-		static auto original = hook.get_original<fn>(index);
-
-		decltype(entities::m_local) m_local;
-
-		if (!strcmp(pEvent->GetName(), "player_death") && g::engine_client->GetPlayerForUserID(pEvent->GetInt("attacker")) == g::engine_client->GetLocalPlayer()) {
-			auto& weapon = g::local_player->m_hActiveWeapon();
-
-			if (weapon && weapon->IsWeapon()) {
-				auto& skin_data = skins::statrack_items[weapon->m_iItemDefinitionIndex()];
-				auto& skin_data2 = skins::m_items[weapon->m_iItemDefinitionIndex()];
-				if (skin_data2.enabled && skin_data2.stat_track.enabled) {
-					skin_data.statrack_new.counter++;
-					weapon->m_nFallbackStatTrak() = skin_data.statrack_new.counter;
-					weapon->GetClientNetworkable()->PostDataUpdate(0);
-					weapon->GetClientNetworkable()->OnDataChanged(0);
-				}
-			}
-			skins::SaveStatrack();
-		}
-
-		if (!strcmp(pEvent->GetName(), "round_start"))
-		{
-			m_local.isBombPlantedStatus = false;
-			m_local.AfterPlant = false;
-		}
-
-		/* if (Options::Misc::killTrashTalk)
-		{
-			if (!strcmp(pEvent->GetName(), "player_death"))
-			{
-				int attacker = g_EngineClient->GetPlayerForUserID(pEvent->GetInt("attacker"));
-				int userid = g_EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));
-				if (attacker != userid)
-				{
-					if (attacker == g_EngineClient->GetLocalPlayer())
-					{
-						g_EngineClient->ExecuteClientCmd("say GOTIHM!");
-						if (attacker = userid)
-						{
-							g_EngineClient->ExecuteClientCmd("say GOTIHM!");
-						}
-					}
-				}
-			}
-		} */
-
-		return original(g::game_events, pEvent);
 	}
 }

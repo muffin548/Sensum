@@ -1,7 +1,8 @@
 #include "math.h"
 #include "console.h"
 #include "entities.h"
-#include "../settings.h"
+#include "../settings/settings.h"
+#include "../settings/globals.h"
 
 namespace entities
 {
@@ -15,6 +16,8 @@ namespace entities
 
 	local_data_t m_local;
 	std::list<tick_data_t> m_items(24);
+
+	CUtlVector<SndInfo_t> sounds;
 
 	matrix3x4_t bone_matrix[MAXSTUDIOBONES];
 
@@ -78,6 +81,67 @@ namespace entities
 		return false;
 	}
 
+	auto GetSoundOfEntities(c_base_player* local)->void
+	{
+		if (!settings::esp::sound)
+			return;
+
+		g::engine_sound->GetActiveSounds(sounds);
+
+		const auto origin = local->m_vecOrigin();
+
+		m_mutex_sounds.lock();
+		{
+			memset(m_sounds, 0, sizeof(m_sounds));
+
+			for (int k = 0; k < sounds.Count(); k++)
+			{
+				if (!(sounds[k].m_nSoundSource > 0) || !sounds[k].m_bUpdatePositions || (sounds[k].m_nChannel != 0 && sounds[k].m_nChannel != 4))
+					continue;
+
+				auto* player = reinterpret_cast<c_base_player*>(g::entity_list->GetClientEntity(sounds[k].m_nSoundSource));
+				if (player && player != local && (settings::misc::deathmatch || player->m_iTeamNum() != local->m_iTeamNum()))
+				{
+					if (player->m_iTeamNum() == team_ct || player->m_iTeamNum() == team_t)
+						m_sounds[k] = sound_t{ player->GetIndex(), player->m_vecOrigin() };
+
+					//if (m_sounds[k].index != 0)
+						//globals::sound = true;
+				}
+			}
+		}
+		m_mutex_sounds.unlock();
+
+		sounds.RemoveAll();
+	}
+
+	auto reset_states()->void
+	{
+		m_mutex_sounds.lock();
+		{
+			memset(m_sounds, 0, sizeof(m_sounds));
+		}
+		m_mutex_sounds.unlock();
+	}
+
+	auto on_create_move(CUserCmd* cmd) -> void
+	{
+		if (!g::local_player || !g::engine_client->IsConnected())
+			return reset_states();
+
+		c_base_player* local(g::local_player);
+		if (!local->IsAlive())
+		{
+			if (!g::local_player->m_hObserverTarget())
+				return reset_states();
+
+			local = reinterpret_cast<c_base_player*>(g::entity_list->GetClientEntityFromHandle(g::local_player->m_hObserverTarget()));
+			if (!local)
+				return reset_states();
+		}
+		GetSoundOfEntities(local);
+	}
+
 	RECT GetBBox(c_base_entity* ent, Vector* pointsTransformed)
 	{
 		auto collideable = ent->GetCollideable();
@@ -107,7 +171,7 @@ namespace entities
 		return {};
 	}
 
-	float damage_for_armor(const float& damage, const int& armor_value)
+	float damage_for_armor_old(const float& damage, const int& armor_value)
 	{
 		if (armor_value <= 0)
 			return damage;
@@ -125,10 +189,10 @@ namespace entities
 
 	float curtime(const int& tick_base)
 	{
-		return interfaces::global_vars->interval_per_tick * tick_base;
+		return g::global_vars->interval_per_tick * tick_base;
 	}
 
-	float csgo_armor(float damage, int armor_value) {
+	float damage_for_armor(float damage, int armor_value) {
 		float armor_ratio = 0.5f;
 		float armor_bonus = 0.5f;
 		if (armor_value > 0) {
@@ -147,34 +211,18 @@ namespace entities
 
 	int get_health(c_base_player* local, c_planted_c4* bomb)
 	{
-		/*if (!local->IsAlive())
-			return 0;
-
-		float distance = local->m_vecOrigin().DistTo(bomb->m_vecOrigin());
-
-		float d = ((distance - 75.68f) / 789.2f);
-		float damage = 450.7f * exp(-d * d);
-
-		const auto f = damage_for_armor(damage, local->m_ArmorValue());
-		damage = std::max(int(ceilf(f)), 0);
-
-		int result = local->m_iHealth() - damage;
-
-		return result <= 0 ? 0 : result; */
-
 		float damage;
-		float hp_reimaing = g::local_player->m_iHealth();
+		float hp_remaining = local->m_iHealth();
 		auto distance = local->GetEyePos().DistTo(bomb->m_vecOrigin());
 		auto a = 450.7f;
 		auto b = 75.68f;
 		auto c = 789.2f;
 		auto d = ((distance - b) / c);
 		auto fl_damage = a * exp(-d * d);
-		damage = float((std::max)((int)ceilf(csgo_armor(fl_damage, g::local_player->m_ArmorValue())), 0));
-		m_local.damage = damage;
-		hp_reimaing -= damage;
+		damage = damage_for_armor(fl_damage, local->m_ArmorValue());
+		hp_remaining -= damage;
 
-		return hp_reimaing + 1.f;
+		return hp_remaining < 0 ? 0 : hp_remaining;
 	}
 
 	float get_bomb_time(c_planted_c4* bomb, const int& tick_base)
@@ -211,11 +259,8 @@ namespace entities
 
 	c_planted_c4* get_bomb()
 	{
-		//if (!interfaces::game_rules_proxy || !interfaces::game_rules_proxy->m_bBombPlanted())
-			//return nullptr;
-
 		c_base_entity* entity;
-		for (auto i = 1; i <= interfaces::entity_list->GetMaxEntities(); ++i)
+		for (auto i = 1; i <= g::entity_list->GetMaxEntities(); ++i)
 		{
 			entity = c_base_entity::GetEntityByIndex(i);
 			if (entity && !entity->is_dormant() && entity->IsPlantedC4())
@@ -243,10 +288,10 @@ namespace entities
 	bool is_matchmaking()
 	{
 		if (!game_type)
-			game_type = interfaces::cvar->find("game_type");
+			game_type = g::cvar->find("game_type");
 
 		if (!game_mode)
-			game_mode = interfaces::cvar->find("game_mode");
+			game_mode = g::cvar->find("game_mode");
 
 		if (game_type->GetInt() != 0) //classic
 			return false;
@@ -313,7 +358,7 @@ namespace entities
 
 	void fetch_targets(CUserCmd* cmd)
 	{
-		c_base_player* local = interfaces::local_player;
+		c_base_player* local = g::local_player;
 		if (!local)
 		{
 			destroy();
@@ -328,7 +373,7 @@ namespace entities
 		}
 
 		local_mutex.lock();
-		set_local(local, m_local, interfaces::local_player->m_nTickBase());
+		set_local(local, m_local, g::local_player->m_nTickBase());
 		local_mutex.unlock();
 
 		tick_data_t tick_data;
@@ -340,7 +385,7 @@ namespace entities
 		bool is_visible;
 
 		c_base_player* player;
-		for (int i = 1; i < interfaces::engine_client->GetMaxClients(); ++i)
+		for (int i = 1; i < g::engine_client->GetMaxClients(); ++i)
 		{
 			player = c_base_player::GetPlayerByIndex(i);
 			if (!player || player == local)
@@ -359,17 +404,9 @@ namespace entities
 			if (!is_enemy && !settings::misc::deathmatch)
 				continue;
 
-			auto studio_model = interfaces::mdl_info->GetStudiomodel(player->GetModel());
+			auto studio_model = g::mdl_info->GetStudiomodel(player->GetModel());
 			if (!studio_model)
 				continue;
-			/*
-#ifdef _DEBUG
-			console::print("=== entity ===");
-			console::print(player->m_vecOrigin());
-			console::print("flVelocity %.2f", player->m_vecVelocity().Length2D());
-			console::print("flSimulationTime %.2f", player->m_flSimulationTime());
-#endif
-			*/
 
 			player_data_t player_data;
 			player_data.index = player->GetIndex();
@@ -379,6 +416,7 @@ namespace entities
 			player_data.name = std::string(player->GetPlayerInfo().szName).substr(0, 12);
 
 			player_data.weapon = utils::get_weapon_name(player->m_hActiveWeapon());
+			//player_data.weapon = player->m_hActiveWeapon().Get()->GetWeaponName();
 			player_data.icon = player->m_hActiveWeapon()->GetGunIcon();
 			player_data.kevlar_icon = player->GetArmorIcon();
 			player_data.wep_str_size = player->m_hActiveWeapon()->GetGunStringSize();
@@ -392,6 +430,8 @@ namespace entities
 			player_data.is_c4_carrier = player->HasC4();
 			player_data.has_defkit = player->m_bHasDefuser();
 			player_data.is_desyncing = IsDesyncing(player);
+			player_data.draw_entity = player->DrawSpecificEntity();
+			//player_data.sound = globals::sound;
 
 			auto weapData = player->m_hActiveWeapon();
 
@@ -409,7 +449,7 @@ namespace entities
 				player_data.m_iAmmo = 0; player_data.m_MaxAmmo = 0;
 
 			player_data.m_MaxAmmo = player->m_hActiveWeapon().Get()->m_iPrimaryReserveAmmoCount(); //player->m_hActiveWeapon().Get()->GetMaxAmmo();
-			const auto tick_offset = player->m_vecVelocity() * interfaces::global_vars->interval_per_tick;
+			const auto tick_offset = player->m_vecVelocity() * g::global_vars->interval_per_tick;
 
 			in_smoke = true;
 			is_visible = false;
@@ -420,7 +460,7 @@ namespace entities
 			player->SetAbsOrigin(player_data.world_pos);
 			player->InvalidateBoneCache();
 
-			if (!player->SetupBones(bone_matrix, MAXSTUDIOBONES, BONE_USED_BY_HITBOX, interfaces::global_vars->curtime))
+			if (!player->SetupBones(bone_matrix, MAXSTUDIOBONES, BONE_USED_BY_HITBOX, g::global_vars->curtime))
 			{
 				player->SetAbsOrigin(old_origin);
 				player->InvalidateBoneCache();
@@ -466,10 +506,10 @@ namespace entities
 				if (!settings::esp::enabled || !on_screen || !is_hitbox_for_visible_check(k))
 					continue;
 
-				if (!is_visible)
+				if (!is_visible && !player_data.draw_entity)
 				{
 					ray.Init(eye_pos, player_data.hitboxes[k][0]);
-					interfaces::engine_trace->trace_ray(ray, CONTENTS_SOLID | CONTENTS_MOVEABLE | CONTENTS_MONSTER | CONTENTS_DEBRIS | CONTENTS_HITBOX, &filter, &tr);
+					g::engine_trace->trace_ray(ray, CONTENTS_SOLID | CONTENTS_MOVEABLE | CONTENTS_MONSTER | CONTENTS_DEBRIS | CONTENTS_HITBOX, &filter, &tr);
 
 					is_visible = tr.endpos.DistTo(eye_pos) == player_data.hitboxes[k][0].DistTo(eye_pos);
 				}
@@ -491,7 +531,7 @@ namespace entities
 			player_data.is_visible = is_visible;
 
 			player_data.box = GetBBox(player, player_data.points);
-			player_data.origin = origin;
+			player_data.origin = player->m_vecOrigin();
 			player_data.offset = tick_offset;
 			player_data.angles = player->m_angEyeAngles();
 

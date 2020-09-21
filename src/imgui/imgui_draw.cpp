@@ -1451,9 +1451,9 @@ void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_wid
 	}
 
 	*out_pixels = TexPixelsAlpha8;
-	if (out_width)* out_width = TexWidth;
-	if (out_height)* out_height = TexHeight;
-	if (out_bytes_per_pixel)* out_bytes_per_pixel = 1;
+	if (out_width)*out_width = TexWidth;
+	if (out_height)*out_height = TexHeight;
+	if (out_bytes_per_pixel)*out_bytes_per_pixel = 1;
 }
 
 void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
@@ -1470,14 +1470,14 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
 			const unsigned char* src = pixels;
 			unsigned int* dst = TexPixelsRGBA32;
 			for (int n = TexWidth * TexHeight; n > 0; n--)
-				* dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
+				*dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
 		}
 	}
 
 	*out_pixels = (unsigned char*)TexPixelsRGBA32;
-	if (out_width)* out_width = TexWidth;
-	if (out_height)* out_height = TexHeight;
-	if (out_bytes_per_pixel)* out_bytes_per_pixel = 4;
+	if (out_width)*out_width = TexWidth;
+	if (out_height)*out_height = TexHeight;
+	if (out_bytes_per_pixel)*out_bytes_per_pixel = 4;
 }
 
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
@@ -1647,10 +1647,10 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
 	ImVec2 size = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][1];
 	*out_size = size;
 	*out_offset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][2];
-	out_uv_border[0] = (pos)* TexUvScale;
+	out_uv_border[0] = (pos)*TexUvScale;
 	out_uv_border[1] = (pos + size) * TexUvScale;
 	pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
-	out_uv_fill[0] = (pos)* TexUvScale;
+	out_uv_fill[0] = (pos)*TexUvScale;
 	out_uv_fill[1] = (pos + size) * TexUvScale;
 	return true;
 }
@@ -2327,7 +2327,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
 	const char* s = text;
 	while (s < text_end)
 	{
-		unsigned int c = (unsigned int)* s;
+		unsigned int c = (unsigned int)*s;
 		const char* next_s;
 		if (c < 0x80)
 			next_s = s + 1;
@@ -2446,7 +2446,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 
 		// Decode and advance source
 		const char* prev_s = s;
-		unsigned int c = (unsigned int)* s;
+		unsigned int c = (unsigned int)*s;
 		if (c < 0x80)
 		{
 			s += 1;
@@ -2488,7 +2488,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 		text_size.y += line_height;
 
 	if (remaining)
-		* remaining = s;
+		*remaining = s;
 
 	return text_size;
 }
@@ -2497,7 +2497,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 {
 	if (c == ' ' || c == '\t' || c == '\n' || c == '\r') // Match behavior of RenderText(), those 4 codepoints are hard-coded.
 		return;
-	if (const ImFontGlyph * glyph = FindGlyph(c))
+	if (const ImFontGlyph* glyph = FindGlyph(c))
 	{
 		float scale = (size >= 0.0f) ? (size / FontSize) : 1.0f;
 		pos.x = (float)(int)pos.x + DisplayOffset.x;
@@ -2572,7 +2572,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 		}
 
 		// Decode and advance source
-		unsigned int c = (unsigned int)* s;
+		unsigned int c = (unsigned int)*s;
 		if (c < 0x80)
 		{
 			s += 1;
@@ -2603,7 +2603,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 		}
 
 		float char_width = 0.0f;
-		if (const ImFontGlyph * glyph = FindGlyph((unsigned short)c))
+		if (const ImFontGlyph* glyph = FindGlyph((unsigned short)c))
 		{
 			char_width = glyph->AdvanceX * scale;
 
@@ -2775,7 +2775,7 @@ static void stb__match(const unsigned char* data, unsigned int length)
 	IM_ASSERT(stb__dout + length <= stb__barrier_out_e);
 	if (stb__dout + length > stb__barrier_out_e) { stb__dout += length; return; }
 	if (data < stb__barrier_out_b) { stb__dout = stb__barrier_out_e + 1; return; }
-	while (length--)* stb__dout++ = *data++;
+	while (length--)*stb__dout++ = *data++;
 }
 
 static void stb__lit(const unsigned char* data, unsigned int length)

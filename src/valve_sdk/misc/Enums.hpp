@@ -442,15 +442,16 @@ enum EClassId : int
 	CWeaponUMP45 = 270,
 	CWeaponUSP = 271,
 	CWeaponXM1014 = 272,
-	CWorld = 273,
-	CWorldVguiText = 274,
-	DustTrail = 275,
-	MovieExplosion = 276,
-	ParticleSmokeGrenade = 277,
-	RocketTrail = 278,
-	SmokeTrail = 279,
-	SporeExplosion = 280,
-	SporeTrail = 281,
+	CWeaponZoneRepulsor = 273,
+	CWorld = 274,
+	CWorldVguiText = 275,
+	DustTrail = 276,
+	MovieExplosion = 277,
+	ParticleSmokeGrenade = 278,
+	RocketTrail = 279,
+	SmokeTrail = 280,
+	SporeExplosion = 281,
+	SporeTrail = 282
 };
 
 enum ECSPlayerBone

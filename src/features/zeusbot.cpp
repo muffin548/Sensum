@@ -1,5 +1,5 @@
 #include "features.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../helpers/input.h"
 #include "../helpers/console.h"
 #include "../helpers/autowall.h"
@@ -11,13 +11,13 @@ namespace zeusbot
 
 	bool is_enabled(CUserCmd* cmd)
 	{
-		if (!interfaces::local_player || !interfaces::local_player->IsAlive() || cmd->buttons & IN_ATTACK)
+		if (!g::local_player || !g::local_player->IsAlive() || cmd->buttons & IN_ATTACK)
 			return false;
 
 		if (globals::binds::zeus_bot == 0 || !input_system::is_key_down(globals::binds::zeus_bot))
 			return false;
 
-		weapon = interfaces::local_player->m_hActiveWeapon();
+		weapon = g::local_player->m_hActiveWeapon();
 		if (!weapon || weapon->m_iItemDefinitionIndex() != WEAPON_TASER || !weapon->CanFire())
 			return false;
 
@@ -41,11 +41,11 @@ namespace zeusbot
 		c_base_player* player;
 		c_base_player* target = nullptr;
 
-		auto nci = interfaces::engine_client->GetNetChannelInfo();
+		auto nci = g::engine_client->GetNetChannelInfo();
 		if (!nci)
 			return;
 
-		static const auto sv_maxunlag = interfaces::cvar->find("sv_maxunlag");
+		static const auto sv_maxunlag = g::cvar->find("sv_maxunlag");
 		const auto unlag = sv_maxunlag->GetFloat();
 		const auto interpolation_comp = utils::get_interpolation_compensation();
 		const auto network_delay = std::clamp(nci->GetLatency(FLOW_OUTGOING) + nci->GetLatency(FLOW_INCOMING) + interpolation_comp, 0.f, unlag);
@@ -53,7 +53,7 @@ namespace zeusbot
 		const auto correct_next_time = TICKS_TO_TIME(cmd->tick_count + 1) + network_delay;
 
 		CTraceFilterWorldAndPropsOnly filter;
-		const auto eye_pos = interfaces::local_player->GetEyePos();
+		const auto eye_pos = g::local_player->GetEyePos();
 		for (const auto& tick : entities::m_items)
 		{
 			for (const auto& entity : tick.players)
@@ -65,7 +65,7 @@ namespace zeusbot
 					continue;
 
 				player = c_base_player::GetPlayerByIndex(entity.index);
-				if (!player || player == interfaces::local_player)
+				if (!player || player == g::local_player)
 					continue;
 
 				for (size_t h = 0; h < sizeof(entity.hitboxes); h++)
@@ -94,7 +94,7 @@ namespace zeusbot
 						continue;
 
 					ray.Init(eye_pos, hitbox);
-					interfaces::engine_trace->trace_ray(ray, MASK_SOLID, &filter, &tr);
+					g::engine_trace->trace_ray(ray, MASK_SOLID, &filter, &tr);
 					if (eye_pos.DistTo(tr.endpos) != distance)
 						continue;
 
@@ -121,7 +121,7 @@ namespace zeusbot
 
 		const auto old_angles = cmd->viewangles;
 		cmd->viewangles = angles;
-		interfaces::engine_client->SetViewAngles(angles);
+		g::engine_client->SetViewAngles(angles);
 
 		math::correct_movement(cmd, old_angles);
 

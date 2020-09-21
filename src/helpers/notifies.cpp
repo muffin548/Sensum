@@ -1,5 +1,5 @@
 #include "notifies.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../render/render.h"
 
 namespace notifies
@@ -27,11 +27,6 @@ namespace notifies
 		const auto end_time = (state == debug_state ? 2500 : 0) + GetTickCount64() + duration;
 
 		items.emplace_back(notify_data_t{ message, state, end_time });
-	}
-
-	void push(const std::string& english, const std::string& russian, notify_state_s state)
-	{
-		push(globals::russian_language ? russian : english, state);
 	}
 
 	ImU32 alpha_modulate(const ImVec4& color, const float& alpha = 1.f)

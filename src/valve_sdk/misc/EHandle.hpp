@@ -9,7 +9,7 @@
 
 inline IHandleEntity* CBaseHandle::Get() const
 {
-	return interfaces::entity_list->GetClientEntityFromHandle(*this);
+	return g::entity_list->GetClientEntityFromHandle(*this);
 }
 
 // -------------------------------------------------------------------------------------------------- //

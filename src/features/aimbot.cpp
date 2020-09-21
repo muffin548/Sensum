@@ -1,6 +1,6 @@
-﻿#include "features.h"
+#include "features.h"
 #include "../helpers/autowall.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../helpers/input.h"
 #include "../helpers/console.h"
 #include "../helpers/entities.h"
@@ -148,18 +148,16 @@ namespace aimbot
 	bool is_time_valid(const float& time)
 	{
 		return fabsf(out_delay - (correct_nexttime - time - interpolation_time)) <= 0.2f;
-		//return fabsf(out_delay - (correct_nexttime - time - interpolation_time)) <= 0.2f;
 	}
 	//--------------------------------------------------------------------------------
 	bool has_rcs()
 	{
-		return a_settings.recoil.enabled && interfaces::local_player->m_iShotsFired() > (a_settings.recoil.first_bullet ? 0 : 1);
+		return a_settings.recoil.enabled && g::local_player->m_iShotsFired() > (a_settings.recoil.first_bullet ? 0 : 1);
 	}
 	//--------------------------------------------------------------------------------
 	bool is_trigger()
 	{
 		return _is_trigger;
-		//return !(cmd->buttons & IN_ATTACK) && settings.trigger.enabled;
 	}
 	bool IsNotSilent(float fov)
 	{
@@ -172,7 +170,7 @@ namespace aimbot
 		_is_trigger = false;
 		_is_backshot = false;
 
-		weapon = interfaces::local_player->m_hActiveWeapon();
+		weapon = g::local_player->m_hActiveWeapon();
 		if (!weapon || !weapon->IsWeapon())
 			return false;
 
@@ -218,9 +216,6 @@ namespace aimbot
 
 		if (!(cmd->buttons & IN_ATTACK))
 		{
-			if (globals::binds::back_shot > 0)
-				_is_backshot = _is_trigger = GetAsyncKeyState(globals::binds::back_shot) & 0x8000;
-
 			if (!_is_trigger)
 			{
 				if (!a_settings.trigger.enabled)
@@ -236,7 +231,7 @@ namespace aimbot
 		static int time_in_scope = 0;
 		if (utils::is_sniper(weapon->m_iItemDefinitionIndex()))
 		{
-			if (!interfaces::local_player->m_bIsScoped())
+			if (!g::local_player->m_bIsScoped())
 				time_in_scope = GetTickCount64();
 
 			if (a_settings.check_zoom && time_in_scope + 60 > GetTickCount64())
@@ -263,7 +258,7 @@ namespace aimbot
 			y += utils::random(0.1f, 0.6f);
 		}
 
-		static auto weapon_recoil_scale = interfaces::cvar->find("weapon_recoil_scale");
+		static auto weapon_recoil_scale = g::cvar->find("weapon_recoil_scale");
 		float scale = weapon_recoil_scale->GetFloat();
 		if (scale != 2.f)
 		{
@@ -284,7 +279,7 @@ namespace aimbot
 		else if (a_settings.recoil.standalone)
 			punch = { (punches::current.pitch - punches::last.pitch) * x, (punches::current.yaw - punches::last.yaw) * y, 0 };
 
-		if ((punch.pitch != 0.f || punch.yaw != 0.f) && interfaces::local_player->m_aimPunchAngle().roll == 0.f)
+		if ((punch.pitch != 0.f || punch.yaw != 0.f) && g::local_player->m_aimPunchAngle().roll == 0.f)
 		{
 			angle -= punch;
 			angle.NormalizeClamp();
@@ -307,10 +302,13 @@ namespace aimbot
 			return;
 		}
 
+		auto x = a_settings.recoil.pitch;
+		auto y = a_settings.recoil.yaw;
+
 		if (a_settings.recoil.humanize)
 		{
-			a_settings.recoil.yaw += utils::random(0.1f, 0.5f);
-			a_settings.recoil.pitch += utils::random(0.1f, 0.6f);
+			x += utils::random(0.1f, 0.5f);
+			y += utils::random(0.1f, 0.6f);
 		}
 
 		if (target) {
@@ -344,7 +342,7 @@ namespace aimbot
 		}
 		QAngle angles = pCmd->viewangles;
 		QAngle current = angles;
-		float fov = 15.f; //was 180
+		float fov = 15.f;
 
 		CurrentPunch = g::local_player->m_aimPunchAngle();
 		if (IsNotSilent(fov)) {
@@ -396,10 +394,10 @@ namespace aimbot
 	//--------------------------------------------------------------------------------
 	bool can_aiming()
 	{
-		if (a_settings.check_flash && interfaces::local_player->IsFlashed())
+		if (a_settings.check_flash && g::local_player->IsFlashed())
 			return false;
 
-		if (a_settings.check_air && !(interfaces::local_player->m_fFlags() & FL_ONGROUND))
+		if (a_settings.check_air && !(g::local_player->m_fFlags() & FL_ONGROUND))
 			return false;
 
 		return true;
@@ -492,7 +490,7 @@ namespace aimbot
 				if (_is_backshot && !player_data.is_shooting)
 					continue;
 
-				if (player_data.index == 0 || player_data.index == interfaces::local_player->GetIndex())
+				if (player_data.index == 0 || player_data.index == g::local_player->GetIndex())
 					continue;
 
 				const auto sim_time = _is_backshot ? player_data.m_flShotTime : player_data.m_flSimulationTime;
@@ -501,11 +499,11 @@ namespace aimbot
 					continue;
 
 				const auto result_of_duplicates = std::find_if(duplicates.begin(), duplicates.end(), [player_data](entity_pos_t const& c)
-				{
-					const auto is_same = c.sim_time == player_data.m_flSimulationTime || (c.eye_pos == player_data.eye_pos && c.origin == player_data.world_pos);
+					{
+						const auto is_same = c.sim_time == player_data.m_flSimulationTime || (c.eye_pos == player_data.eye_pos && c.origin == player_data.world_pos);
 
-					return c.id == player_data.index && is_same;
-				});
+						return c.id == player_data.index && is_same;
+					});
 
 				if (result_of_duplicates != duplicates.end())
 					continue;
@@ -587,7 +585,7 @@ namespace aimbot
 		if (!can_aiming() || a_settings.fov <= 0.f)
 			return false;
 
-		const auto eye_pos = interfaces::local_player->GetEyePos();
+		const auto eye_pos = g::local_player->GetEyePos();
 		auto targets = get_targets(angles, eye_pos, tick_count);
 		if (targets.empty())
 			return false;
@@ -619,7 +617,7 @@ namespace aimbot
 				item.entity->InvalidateBoneCache();
 			};
 
-			CTraceFilterSkipTwoEntities filter(interfaces::local_player, item.entity);
+			CTraceFilterSkipTwoEntities filter(g::local_player, item.entity);
 			for (const auto& hitbox : item.hitboxes)
 			{
 				if (!hitbox.IsValid())
@@ -632,7 +630,7 @@ namespace aimbot
 					break;
 
 				ray.Init(eye_pos, hitbox);
-				interfaces::engine_trace->trace_ray(ray, CONTENTS_SOLID | CONTENTS_MOVEABLE | CONTENTS_MONSTER | CONTENTS_DEBRIS | CONTENTS_HITBOX, &filter, &tr);
+				g::engine_trace->trace_ray(ray, CONTENTS_SOLID | CONTENTS_MOVEABLE | CONTENTS_MONSTER | CONTENTS_DEBRIS | CONTENTS_HITBOX, &filter, &tr);
 
 				auto is_visible = true;
 				if (eye_pos.DistTo(tr.endpos) != eye_pos.DistTo(hitbox))
@@ -680,9 +678,9 @@ namespace aimbot
 	//--------------------------------------------------------------------------------
 	void fetch_net_delays(const int& tick_count)
 	{
-		const auto nci = interfaces::engine_client->GetNetChannelInfo();
+		const auto nci = g::engine_client->GetNetChannelInfo();
 
-		static const auto sv_maxunlag = interfaces::cvar->find("sv_maxunlag");
+		static const auto sv_maxunlag = g::cvar->find("sv_maxunlag");
 
 		const auto unlag = sv_maxunlag->GetFloat();
 		interpolation_time = utils::get_interpolation_compensation();
@@ -697,7 +695,7 @@ namespace aimbot
 
 	void handle(CUserCmd* cmd)
 	{
-		if (!interfaces::local_player || !interfaces::local_player->IsAlive())
+		if (!g::local_player || !g::local_player->IsAlive())
 			return;
 
 		if (!is_enabled(cmd))
@@ -709,14 +707,14 @@ namespace aimbot
 		auto active = g::local_player->m_hActiveWeapon();
 		auto aa_settings = settings::aimbot::m_items[active->m_iItemDefinitionIndex()];
 
+		auto hitbox_head_backup = aa_settings.hitboxes.head;
+		auto hitbox_body_backup = aa_settings.hitboxes.body;
+		auto hitbox_legs_backup = aa_settings.hitboxes.legs;
+		auto hitbox_hands_backup = aa_settings.hitboxes.hands;
+		auto hitbox_neck_backup = aa_settings.hitboxes.neck;
+
 		if (aa_settings.rcs_override_hitbox)
 		{
-			static auto hitbox_head_backup = aa_settings.hitboxes.head;
-			static auto hitbox_body_backup = aa_settings.hitboxes.body;
-			static auto hitbox_legs_backup = aa_settings.hitboxes.legs;
-			static auto hitbox_hands_backup = aa_settings.hitboxes.hands;
-			static auto hitbox_neck_backup = aa_settings.hitboxes.neck;
-
 			if (g::local_player->m_iShotsFired() >= 3)
 			{
 				if (aa_settings.hitboxes.head == true)
@@ -761,7 +759,7 @@ namespace aimbot
 		auto angles = cmd->viewangles;
 		const auto current = angles;
 
-		const auto eye_pos = interfaces::local_player->GetEyePos();
+		const auto eye_pos = g::local_player->GetEyePos();
 
 		fetch_net_delays(cmd->tick_count);
 
@@ -799,9 +797,9 @@ namespace aimbot
 			{
 				auto hit_state = false;
 				set_and_restore_poses(result.abs_origin, result.abs_angles, [&hit_state, angles, min_hitchance, result]()
-				{
-					hit_state = utils::hitchance(target, angles, min_hitchance/*, 150.f, hitbox_groups[result.hitbox_id]*/);
-				});
+					{
+						hit_state = utils::hitchance(target, angles, min_hitchance/*, 150.f, hitbox_groups[result.hitbox_id]*/);
+					});
 
 				if (!hit_state)
 					reset_angles();
@@ -846,7 +844,7 @@ namespace aimbot
 			}
 		}
 
-		punches::current = interfaces::local_player->m_aimPunchAngle();
+		punches::current = g::local_player->m_aimPunchAngle();
 		{
 			if (!RCS(angles, target))
 				punches::last_corrected = { 0, 0, 0 };
@@ -885,44 +883,50 @@ namespace aimbot
 			{
 				engine_angles = false;
 
-				if (weapon->CanFire())
-					cmd->viewangles = silent_angles;
+				/*if (weapon->CanFire()) //old method
+					cmd->viewangles = silent_angles;*/
+
+				if (weapon->CanFire()) //new method
+				{
+					silent_angles.NormalizeClamp();
+					g::engine_client->SetViewAngles(silent_angles);
+				}
 			}
 		}
 
 		math::correct_movement(cmd, current);
 
 		if (engine_angles)
-			interfaces::engine_client->SetViewAngles(angles);
+			g::engine_client->SetViewAngles(angles);
 
 		silent_enabled = a_settings.silent.enabled && a_settings.silent.always;
 
 		if (target && shot_delay && a_settings.autodelay)
 		{
 			set_and_restore_poses(result.abs_origin, result.abs_angles, [eye_pos, angles, result]()
-			{
-				Ray_t ray;
-				CGameTrace tr;
-
-				Vector range;
-				math::angle2vectors(angles, range);
-				range *= weapon->get_weapon_data()->flRange;
-
-				if (result.is_visible)
 				{
-					CTraceFilterSkipEntity filter(interfaces::local_player);
+					Ray_t ray;
+					CGameTrace tr;
 
-					ray.Init(eye_pos, eye_pos + range);
-					interfaces::engine_trace->trace_ray(ray, MASK_SHOT | CONTENTS_GRATE, &filter, &tr);
+					Vector range;
+					math::angle2vectors(angles, range);
+					range *= weapon->get_weapon_data()->flRange;
 
-					if (tr.hit_entity == result.entity)
+					if (result.is_visible)
+					{
+						CTraceFilterSkipEntity filter(g::local_player);
+
+						ray.Init(eye_pos, eye_pos + range);
+						g::engine_trace->trace_ray(ray, MASK_SHOT | CONTENTS_GRATE, &filter, &tr);
+
+						if (tr.hit_entity == result.entity)
+							shot_delay = false;
+					}
+					else if (autowall::get_damage(eye_pos + range) > 1.f)
+					{
 						shot_delay = false;
-				}
-				else if (autowall::get_damage(eye_pos + range) > 1.f)
-				{
-					shot_delay = false;
-				}
-			});
+					}
+				});
 
 			if (!shot_delay)
 				cmd->buttons |= IN_ATTACK;

@@ -78,7 +78,7 @@ enum EHitboxes
 
 typedef unsigned short MDLHandle_t;
 
-struct mstudiobone_t
+/*struct mstudiobone_t
 {
 	int     sznameindex;
 	int     parent;		// parent bone
@@ -92,6 +92,58 @@ struct mstudiobone_t
 	matrix3x4_t poseToBone;
 	Quaternion  qAlignment;
 	int flags;
+};*/
+
+struct mstudiobone_t
+{
+	int sznameindex;
+
+	inline char* const pszName(void) const
+	{
+		return ((char*)this) + sznameindex;
+	}
+
+	int parent;        // parent bone
+	int bonecontroller[6];    // bone controller index, -1 == none
+
+	// default values
+	Vector pos;
+	Quaternion quat;
+	RadianEuler rot;
+	// compression scale
+	Vector posscale;
+	Vector rotscale;
+
+	matrix3x4_t poseToBone;
+	Quaternion qAlignment;
+	int flags;
+	int proctype;
+	int procindex;        // procedural rule
+	mutable int physicsbone;    // index into physically simulated bone
+
+	inline void* pProcedure() const
+	{
+		if (procindex == 0)
+			return NULL;
+		else
+			return (void*)(((unsigned char*)this) + procindex);
+	};
+
+	int surfacepropidx;
+
+	inline char* const pszSurfaceProp(void) const
+	{
+		return ((char*)this) + surfacepropidx;
+	}
+
+	inline int GetSurfaceProp(void) const
+	{
+		return surfacepropLookup;
+	}
+
+	int contents;        // See BSPFlags.h for the contents flags
+	int surfacepropLookup;    // this index must be cached by the loader, not saved in the file
+	int unused[7];        // remove as appropriate
 };
 
 struct mstudiobbox_t

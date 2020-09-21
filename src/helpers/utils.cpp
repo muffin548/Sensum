@@ -2,28 +2,29 @@
 #include "math.h"
 #include "input.h"
 #include "console.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../security/importer.h"
 #include "../features/features.h"
 #include "../imgui/imgui_internal.h"
 #include "../valve_sdk/csgostructs.hpp"
 #include "..//render/render.h"
-#include "..//esp.hpp"
+#include "../features/esp.hpp"
 
 #define NOMINMAX
 #include <Windows.h>
 #include <string>
 #include <vector>
+#include <chrono>
 
 namespace utils
 {
 	float get_interpolation_compensation()
 	{
-		static const auto cl_interp = interfaces::cvar->find("cl_interp");
-		static const auto max_ud_rate = interfaces::cvar->find("sv_maxupdaterate");
-		static const auto cl_interp_ratio = interfaces::cvar->find("cl_interp_ratio");
-		static const auto c_min_ratio = interfaces::cvar->find("sv_client_min_interp_ratio");
-		static const auto c_max_ratio = interfaces::cvar->find("sv_client_max_interp_ratio");
+		static const auto cl_interp = g::cvar->find("cl_interp");
+		static const auto max_ud_rate = g::cvar->find("sv_maxupdaterate");
+		static const auto cl_interp_ratio = g::cvar->find("cl_interp_ratio");
+		static const auto c_min_ratio = g::cvar->find("sv_client_min_interp_ratio");
+		static const auto c_max_ratio = g::cvar->find("sv_client_max_interp_ratio");
 
 		float ratio = cl_interp_ratio->GetFloat();
 		if (ratio == 0)
@@ -37,16 +38,74 @@ namespace utils
 		return std::max(cl_interp->GetFloat(), (ratio / ud_rate));
 	}
 
+	Vector CalcHelpPos(Vector target)
+	{
+		c_base_player* plocal = (c_base_player*)g::entity_list->GetClientEntity(g::engine_client->GetLocalPlayer());
+
+		if (!plocal)
+			return Vector(0, 0, 0);
+
+		QAngle vAngle = QAngle(0, 0, 0);
+
+		g::engine_client->GetViewAngles(vAngle);
+
+		float range = 5.f;
+
+		float r_1, r_2;
+		float x_1, y_1;
+
+		Vector LocalRendOrig = plocal->GetRenderOrigin();
+		Vector LocalViewOfst = plocal->m_vecViewOffset();
+
+		Vector vEyeOrigin = LocalRendOrig + LocalViewOfst;
+
+		r_1 = -(target.y - vEyeOrigin.y);
+		r_2 = target.x - vEyeOrigin.x;
+		float Yaw = vAngle.yaw - 90.0f;
+
+		float yawToRadian = Yaw * (float)(M_PI / 180.0F);
+		x_1 = (float)(r_2 * (float)cos((double)(yawToRadian)) - r_1 * sin((double)(yawToRadian))) / 20.f;
+		y_1 = (float)(r_2 * (float)sin((double)(yawToRadian)) + r_1 * cos((double)(yawToRadian))) / 20.f;
+
+		x_1 *= range;
+		y_1 *= range;
+
+		return Vector(x_1, y_1, 0);
+	}
+
+	Vector CalcDir(const Vector& vAngles)
+	{
+		Vector vForward;
+		float	sp, sy, cp, cy;
+
+		sy = sin(DEG2RAD(vAngles[1]));
+		cy = cos(DEG2RAD(vAngles[1]));
+
+		sp = sin(DEG2RAD(vAngles[0]));
+		cp = cos(DEG2RAD(vAngles[0]));
+
+		vForward.x = cp * cy;
+		vForward.y = cp * sy;
+		vForward.z = -sp;
+
+		return vForward;
+	}
+
+	bool Insecure()
+	{
+		return std::strstr(GetCommandLineA(), "-insecure");
+	}
+
 	bool IsPlayingMM()
 	{
 		ConVar* type = nullptr;
 		ConVar* mode = nullptr;
 
 		if (!mode)
-			mode = interfaces::cvar->find("game_mode");
+			mode = g::cvar->find("game_mode");
 
 		if (!type)
-			type = interfaces::cvar->find("game_type");
+			type = g::cvar->find("game_type");
 
 		if (type->GetInt() == 0 && mode->GetInt() == 0) //casual
 			return false;
@@ -60,7 +119,7 @@ namespace utils
 		if (type->GetInt() == 1 && mode->GetInt() == 2) //deathmatch
 			return false;
 
-		if (type->GetInt() == 0 && mode->GetInt() == 1) //competetive
+		if (type->GetInt() == 0 && mode->GetInt() == 1) //competitive
 			return true;
 
 		if (type->GetInt() == 0 && mode->GetInt() == 2) //wingman
@@ -68,6 +127,44 @@ namespace utils
 
 		if (type->GetInt() == 6 && mode->GetInt() == 0) //dangerzone
 			return true;
+
+		if (type->GetInt() == 6 && mode->GetInt() == 0) //scrimmage
+			return true;
+
+		return false;
+	}
+
+	bool IsMMGamemodes()
+	{
+		ConVar* type = nullptr;
+		ConVar* mode = nullptr;
+
+		if (!mode)
+			mode = g::cvar->find("game_mode");
+
+		if (!type)
+			type = g::cvar->find("game_type");
+
+		if (type->GetInt() == 0 && mode->GetInt() == 0) //casual
+			return true;
+
+		if (type->GetInt() == 1 && mode->GetInt() == 1) //demolition
+			return false;
+
+		if (type->GetInt() == 1 && mode->GetInt() == 0) //arms race
+			return false;
+
+		if (type->GetInt() == 1 && mode->GetInt() == 2) //deathmatch
+			return false;
+
+		if (type->GetInt() == 0 && mode->GetInt() == 1) //competitive
+			return true;
+
+		if (type->GetInt() == 0 && mode->GetInt() == 2) //wingman
+			return true;
+
+		if (type->GetInt() == 6 && mode->GetInt() == 0) //dangerzone
+			return false;
 
 		if (type->GetInt() == 6 && mode->GetInt() == 0) //scrimmage
 			return true;
@@ -92,10 +189,10 @@ namespace utils
 			return;
 
 		c_base_player* player = c_base_player::GetPlayerByUserId(user_id);
-		if (!player || !player->IsPlayer() || player == interfaces::local_player)
+		if (!player || !player->IsPlayer() || player == g::local_player)
 			return;
 
-		if (player->m_iTeamNum() == interfaces::local_player->m_iTeamNum() && !settings::misc::deathmatch)
+		if (player->m_iTeamNum() == g::local_player->m_iTeamNum() && !settings::misc::deathmatch)
 			return;
 
 		if (player->GetEyePos().DistTo(end_pos) < 0.1f)
@@ -124,9 +221,9 @@ namespace utils
 		beamInfo.m_vecStart = player->GetEyePos();
 		beamInfo.m_vecEnd = end_pos;
 
-		Beam_t* beam = interfaces::view_render_beams->CreateBeamPoints(beamInfo);
+		Beam_t* beam = g::view_render_beams->CreateBeamPoints(beamInfo);
 		if (beam)
-			interfaces::view_render_beams->DrawBeam(beam);
+			g::view_render_beams->DrawBeam(beam);
 	}
 
 	ImU32 to_im32(const Color& color, const float& alpha)
@@ -143,6 +240,10 @@ namespace utils
 		return reinterpret_cast<void*>(GetProcAddress(mod, export_name));
 	}
 
+	unsigned int GetVirtual(void* class_, unsigned int index) {
+		return (unsigned int)(*(int**)class_)[index];
+	}
+
 	std::string get_weapon_name(void* weapon)
 	{
 		static const auto V_UCS2ToUTF8 = static_cast<int(*)(const wchar_t* ucs2, char* utf8, int len)>(get_export("vstdlib.dll", "V_UCS2ToUTF8"));
@@ -150,7 +251,7 @@ namespace utils
 		if (!weapon)
 			return "";
 
-		const auto wide_name = interfaces::localize->Find(((c_base_combat_weapon*)weapon)->get_weapon_data()->szHudName);
+		const auto wide_name = g::localize->Find(((c_base_combat_weapon*)weapon)->get_weapon_data()->szHudName);
 
 		char weapon_name[256];
 		V_UCS2ToUTF8(wide_name, weapon_name, sizeof(weapon_name));
@@ -170,15 +271,15 @@ namespace utils
 
 	bool hitchance(c_base_entity* entity, const QAngle& angles, const float& chance, const float& hit_count, const int& hit_group)
 	{
-		if (!interfaces::local_player)
+		if (!g::local_player)
 			return false;
 
-		auto weapon = interfaces::local_player->m_hActiveWeapon();
+		auto weapon = g::local_player->m_hActiveWeapon();
 		if (!weapon || !weapon->IsWeapon())
 			return false;
 
 		Vector forward, right, up;
-		Vector src = interfaces::local_player->GetEyePos();
+		Vector src = g::local_player->GetEyePos();
 		math::angle2vectors(angles, forward, right, up);
 
 		int cHits = 0;
@@ -190,7 +291,7 @@ namespace utils
 
 		Ray_t ray;
 		trace_t tr;
-		CTraceFilterPlayersOnlySkipOne filter(interfaces::local_player);
+		CTraceFilterPlayersOnlySkipOne filter(g::local_player);
 
 		for (int i = 0; i < hit_count; i++)
 		{
@@ -226,7 +327,7 @@ namespace utils
 			viewForward = src + (viewForward * weapon->get_weapon_data()->flRange);
 
 			ray.Init(src, viewForward);
-			interfaces::engine_trace->trace_ray(ray, MASK_SHOT | CONTENTS_GRATE, &filter, &tr);
+			g::engine_trace->trace_ray(ray, MASK_SHOT | CONTENTS_GRATE, &filter, &tr);
 
 			if (tr.hit_entity == entity && (hit_group == -1 || hit_group == tr.hitgroup))
 				++cHits;
@@ -244,13 +345,13 @@ namespace utils
 
 	bool can_lag(const bool& voice_check)
 	{
-		if (interfaces::global_vars->interval_per_tick * 0.9f < interfaces::global_vars->absoluteframetime)
+		if (g::global_vars->interval_per_tick * 0.9f < g::global_vars->absoluteframetime)
 			return false;
 
-		if (voice_check && interfaces::engine_client->IsVoiceRecording())
+		if (voice_check && g::engine_client->IsVoiceRecording())
 			return false;
 
-		auto* channel_info = interfaces::engine_client->GetNetChannelInfo();
+		auto* channel_info = g::engine_client->GetNetChannelInfo();
 		if (channel_info && (channel_info->GetAvgLoss(1) > 0.f || channel_info->GetAvgLoss(0) > 0.f))
 			return false;
 
@@ -311,7 +412,7 @@ namespace utils
 
 	bool is_connected()
 	{
-		return interfaces::engine_client->IsInGame() && interfaces::local_player && interfaces::local_player->IsAlive();
+		return g::engine_client->IsInGame() && g::local_player && g::local_player->IsAlive();
 	}
 
 	struct hud_weapons_t
@@ -328,21 +429,21 @@ namespace utils
 		static const auto full_update_fn = reinterpret_cast<void(*)(void)>(pattern_scan(FORCE_FULL_UPDATE));
 		full_update_fn();
 
-		interfaces::client_state->ForceFullUpdate(); //edit
+		g::client_state->ForceFullUpdate(); //edit
 		return;
-		if (interfaces::local_player)
+		if (g::local_player)
 		{
-			interfaces::client_state->ForceFullUpdate(); //edit
-			interfaces::local_player->PostDataUpdate(0); //edit
+			g::client_state->ForceFullUpdate(); //edit
+			g::local_player->PostDataUpdate(0); //edit
 		}
 
-		if (!interfaces::local_player || !interfaces::local_player->IsAlive())
+		if (!g::local_player || !g::local_player->IsAlive())
 			return;
 
 		static auto clear_hud_weapon_icon_ptr = utils::pattern_scan(CLEAR_HUD_WEAPON_ICON);
 		static auto clear_hud_weapon_icon_fn = reinterpret_cast<std::int32_t(__thiscall*)(void*, std::int32_t)>(clear_hud_weapon_icon_ptr);
 
-		auto element = interfaces::Hud->FindHudElement<std::uintptr_t*>("CCSGO_HudWeaponSelection");
+		auto element = g::hud_system->FindHudElement<std::uintptr_t*>("CCSGO_HudWeaponSelection");
 		auto hud_weapons = reinterpret_cast<hud_weapons_t*>(std::uintptr_t(element) - 0x9c);
 		if (!hud_weapons || *hud_weapons->get_weapon_count() == 0)
 			return;
@@ -362,7 +463,7 @@ namespace utils
 	{
 		globals::playername = name;
 
-		static auto nameConvar = interfaces::cvar->find("name");
+		static auto nameConvar = g::cvar->find("name");
 		nameConvar->m_fnChangeCallbacks.m_Size = 0;
 
 		nameConvar->SetValue(name);
@@ -372,7 +473,7 @@ namespace utils
 
 	HMODULE get_module(const std::string& name)
 	{
-		const auto module_name = name == "client.dll" ? "client_panorama.dll" : name;
+		const auto module_name = name == "client.dll" ? "client.dll" : name;
 
 		if (modules.count(module_name) == 0 || !modules[module_name])
 			modules[module_name] = LI_FN(GetModuleHandleA).cached()(module_name.c_str());
@@ -438,7 +539,7 @@ namespace utils
 	{
 		using ServerRankRevealAll = char(__cdecl*)(int*);
 
-		static uint8_t* fnServerRankRevealAll = utils::pattern_scan(("client_panorama.dll"), "55 8B EC 8B 0D ? ? ? ? 85 C9 75 28 A1 ? ? ? ? 68 ? ? ? ? 8B 08 8B 01 FF 50 04 85 C0 74 0B 8B C8 E8 ? ? ? ? 8B C8 EB 02 33 C9 89 0D ? ? ? ? 8B 45 08");
+		static uint8_t* fnServerRankRevealAll = utils::pattern_scan(("client.dll"), "55 8B EC 51 A1 ? ? ? ? 85 C0 75 37");
 
 		if (fnServerRankRevealAll)
 		{

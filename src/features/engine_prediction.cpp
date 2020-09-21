@@ -1,4 +1,7 @@
 #include "features.h"
+#include "../valve_sdk/interfaces/IPrediction.hpp"
+
+CMoveData m_MoveData;
 
 namespace engine_prediction
 {
@@ -14,7 +17,7 @@ namespace engine_prediction
 
 	bool is_enabled()
 	{
-		return settings::movement::engine_prediction && interfaces::local_player && interfaces::local_player->IsAlive();
+		return settings::movement::engine_prediction && g::local_player && g::local_player->IsAlive();
 	}
 
 	void start(CUserCmd* cmd)
@@ -22,6 +25,8 @@ namespace engine_prediction
 		was_predicted = is_enabled();
 		if (!was_predicted)
 			return;
+
+		c_base_player* local = reinterpret_cast<c_base_player*>(g::entity_list->GetClientEntity(g::engine_client->GetLocalPlayer()));
 
 		if (!g::engine_client->IsConnected() || !g::engine_client->IsInGame())
 			return;
@@ -31,26 +36,19 @@ namespace engine_prediction
 
 		*m_pPredictionRandomSeed = cmd->random_seed;
 
-		m_flOldCurtime = interfaces::global_vars->curtime;
-		m_flOldFrametime = interfaces::global_vars->frametime;
-		m_fFlags = interfaces::local_player->m_fFlags();
-		m_nMoveType = interfaces::local_player->m_nMoveType();
+		m_flOldCurtime = g::global_vars->curtime;
+		m_flOldFrametime = g::global_vars->frametime;
 
-		interfaces::global_vars->curtime = interfaces::local_player->m_nTickBase() * interfaces::global_vars->interval_per_tick;
-		interfaces::global_vars->frametime = interfaces::global_vars->interval_per_tick;
+		g::global_vars->curtime = local->m_nTickBase() * g::global_vars->interval_per_tick;
+		g::global_vars->frametime = g::global_vars->interval_per_tick;
 
-		interfaces::game_movement->StartTrackPredictionErrors(interfaces::local_player);
+		g::game_movement->StartTrackPredictionErrors(local);
 
-		void* m_MoveData = *(void**)((DWORD)interfaces::game_movement + 0x8);
-		memset(m_MoveData, 0, sizeof(m_MoveData));
-
-		interfaces::move_helper->SetHost(interfaces::local_player);
-		interfaces::prediction->SetupMove(interfaces::local_player, cmd, interfaces::move_helper, m_MoveData);
-		interfaces::game_movement->ProcessMovement(interfaces::local_player, m_MoveData);
-		interfaces::prediction->FinishMove(interfaces::local_player, cmd, m_MoveData);
-
-		//interfaces::local_player->m_fFlags() = m_fFlags;
-		//interfaces::local_player->m_nMoveType() = m_nMoveType;
+		memset(&m_MoveData, 0, sizeof(m_MoveData));
+		g::move_helper->SetHost(local);
+		g::prediction->SetupMove(local, cmd, g::move_helper, &m_MoveData);
+		g::game_movement->ProcessMovement(local, &m_MoveData);
+		g::prediction->FinishMove(local, cmd, &m_MoveData);
 	}
 
 	void finish(CUserCmd* cmd)
@@ -58,12 +56,14 @@ namespace engine_prediction
 		if (!was_predicted)
 			return;
 
-		interfaces::game_movement->FinishTrackPredictionErrors(interfaces::local_player);
-		interfaces::move_helper->SetHost(nullptr);
+		c_base_player* local = reinterpret_cast<c_base_player*>(g::entity_list->GetClientEntity(g::engine_client->GetLocalPlayer()));
+
+		g::game_movement->FinishTrackPredictionErrors(local);
+		g::move_helper->SetHost(0);
 
 		*m_pPredictionRandomSeed = -1;
 
-		interfaces::global_vars->curtime = m_flOldCurtime;
-		interfaces::global_vars->frametime = m_flOldFrametime;
+		g::global_vars->curtime = m_flOldCurtime;
+		g::global_vars->frametime = m_flOldFrametime;
 	}
 }

@@ -1,8 +1,9 @@
 #include "hooks.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../helpers/utils.h"
 #include "../helpers/console.h"
 #include "../features/features.h"
+#include "../valve_sdk/misc/Recv.hpp"
 
 namespace hooks
 {
@@ -125,7 +126,7 @@ namespace hooks
 			switch (sequence)
 			{
 			case SEQUENCE_DEFAULT_LOOKAT01:
-				return utils::random(SEQUENCE_CSS_LOOKAT01, SEQUENCE_CSS_LOOKAT02);
+				return utils::random(SEQUENCE_CSS_LOOKAT02, SEQUENCE_CSS_LOOKAT02);
 			default:
 				return sequence;
 			}
@@ -137,14 +138,14 @@ namespace hooks
 
 	void remapping(CRecvProxyData* data, c_base_view_model* entity)
 	{
-		if (!interfaces::local_player || !interfaces::local_player->IsAlive())
+		if (!g::local_player || !g::local_player->IsAlive())
 			return;
 
-		const auto owner = (c_base_player*)interfaces::entity_list->GetClientEntityFromHandle(entity->m_hOwner());
-		if (owner != interfaces::local_player)
+		const auto owner = (c_base_player*)g::entity_list->GetClientEntityFromHandle(entity->m_hOwner());
+		if (owner != g::local_player)
 			return;
 
-		const auto view_model_weapon = (c_base_attributable_item*)interfaces::entity_list->GetClientEntityFromHandle(entity->m_hWeapon());
+		const auto view_model_weapon = (c_base_attributable_item*)g::entity_list->GetClientEntityFromHandle(entity->m_hWeapon());
 		if (!view_model_weapon)
 			return;
 
@@ -158,7 +159,7 @@ namespace hooks
 
 	void sequence::hooked(const CRecvProxyData* data, void* entity, void* output)
 	{
-		post_data_update::setup();
+		post_data_update::call();
 
 		static auto original = hook->get_original_function();
 

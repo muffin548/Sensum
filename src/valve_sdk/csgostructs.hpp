@@ -37,32 +37,6 @@ static auto funcname() ->  RecvProp* \
 	return prop_ptr; \
 }
 
-class CCSPlayerAnimState
-{
-public:
-	char pad_0000[120]; //0x0000
-	float m_flEyeYaw; //0x0078
-	float m_flPitch; //0x007C
-	float m_flGoalFeetYaw; //0x0080
-	float m_flCurrentFeetYaw; //0x0084
-	char pad_0088[28]; //0x0088
-	float m_flDuckAmount; //0x00A4
-	char pad_00A8[8]; //0x00A8
-	Vector m_vecOrigin; //0x00B0
-	Vector m_vecLastOrigin; //0x00BC
-	char pad_00C8[0x30]; //0x00C8
-	float m_flSpeedFraction; //0x00F8
-	float m_flSpeedFactor; //0x00FC
-	char pad_0100[28]; //0x0100
-	float m_flLandingRatio; //0x011C
-	char pad_0120[528]; //0x0120
-	float m_flMinBodyYawDegrees; //0x0330
-	float m_flMaxBodyYawDegrees; //0x0334
-	float speed_2d; //0xEC
-	float flUpVelocity; //0xF0
-	void* pBaseEntity; //0x60
-};
-
 class CAnimationLayer
 {
 public:
@@ -184,13 +158,13 @@ public:
 
 	static __forceinline c_base_entity* GetEntityByIndex(int index)
 	{
-		return static_cast<c_base_entity*>(interfaces::entity_list->GetClientEntity(index));
+		return static_cast<c_base_entity*>(g::entity_list->GetClientEntity(index));
 	}
 
 	template <typename A>
 	static __forceinline A* GetEntityFromHandle(CBaseHandle h)
 	{
-		return static_cast<A*>(interfaces::entity_list->GetClientEntityFromHandle(h));
+		return static_cast<A*>(g::entity_list->GetClientEntityFromHandle(h));
 	}
 
 	static __forceinline c_base_entity* GetEntityFromHandle(CBaseHandle h)
@@ -210,6 +184,18 @@ public:
 	NETVAR(float, m_flDefuseCountDown, "CPlantedC4", "m_flDefuseCountDown");
 	NETVAR(CHandle<c_base_player>, m_hBombDefuser, "CPlantedC4", "m_hBombDefuser");
 	NETVAR(int, m_nBombSite, "CPlantedC4", "m_nBombSite");
+};
+
+class c_base_grenade : public c_base_entity
+{
+public:
+	NETVAR(float, m_flDamage, "CBaseGrenade", "m_flDamage");
+	NETVAR(int32_t, m_DmgRadius, "CBaseGrenade", "m_DmgRadius");
+	NETVAR(bool, m_bIsLive, "CBaseGrenade", "m_bIsLive");
+	NETVAR(CHandle<c_base_player>, m_hThrower, "CBaseGrenade", "m_hThrower");
+	NETVAR(Vector, m_vecVelocity, "CBaseGrenade", "m_vecVelocity");
+	NETVAR(int32_t, m_fFlags, "CBaseGrenade", "m_fFlags");
+
 };
 
 class c_base_attributable_item : public c_base_entity
@@ -258,6 +244,7 @@ public:
 	NETVAR(bool, m_bPinPulled, "CBaseCSGrenade", "m_bPinPulled");
 	NETVAR(float_t, m_fThrowTime, "CBaseCSGrenade", "m_fThrowTime");
 	NETVAR(float_t, m_flThrowStrength, "CBaseCSGrenade", "m_flThrowStrength");
+	NETVAR(int32_t, m_nExplodeEffectTickBegin, "CBaseCSGrenadeProjectile", "m_nExplodeEffectTickBegin");
 	NETVAR(float_t, m_flPostponeFireReadyTime, "CBaseCombatWeapon", "m_flPostponeFireReadyTime");
 	NETVAR(CHandle<c_base_weapon_world_model>, m_hWeaponWorldModel, "CBaseCombatWeapon", "m_hWeaponWorldModel");
 	NETVAR(int32_t, m_zoomLevel, "CWeaponCSBaseGun", "m_zoomLevel");
@@ -268,21 +255,22 @@ public:
 	float GetGunStringSize();
 	bool CanFire();
 	bool IsGrenade();
+	bool IsZeus();
 	bool IsKnife();
 	bool IsReloading();
 	bool IsRifle();
 	bool IsPistol();
 	bool IsSniper();
 	bool IsSmoke();
+	bool IsFlash();
 	bool HasScope();
 	bool IsGun();
 
 	float GetInaccuracy();
 	float GetSpread();
+	const char* GetWeaponName();
 	void UpdateAccuracyPenalty();
-	bool is_grenade();
 	bool check_detonate(const Vector& vecThrow, const trace_t& tr, int tick, float interval);
-	int GetMaxAmmo();
 };
 
 class C_BasePlayerAnimState;
@@ -347,17 +335,10 @@ public:
 
 	Vector get_bone_position(int bone) {
 		matrix3x4_t bone_matrices[128];
-		if (SetupBones(bone_matrices, 128, 256, 0.0f))
-			return Vector{ bone_matrices[bone][0][3], bone_matrices[bone][1][3], bone_matrices[bone][2][3] };
+		if (this->SetupBones(bone_matrices, 128, BONE_USED_BY_HITBOX, g::global_vars->curtime))
+			return Vector(bone_matrices[bone][0][3], bone_matrices[bone][1][3], bone_matrices[bone][2][3]);
 		else
-			return Vector{ };
-	}
-
-	float_t c_base_player::m_flSpawnTime() {
-		// 0xA360
-		//static auto m_iAddonBits = NetvarSys::Get( ).GetOffset( "DT_CSPlayer", "m_iAddonBits" );
-		//return *( float_t* )( ( uintptr_t )this + m_iAddonBits - 0x4 );
-		return *(float_t*)((uintptr_t)this + 0xA360);
+			return Vector(0.f, 0.f, 0.f);
 	}
 
 	bool IsEnemy()
@@ -393,7 +374,6 @@ public:
 	CUserCmd*& m_pCurrentCommand();
 	Vector        GetEyePos();
 	Vector		  get_hitbox_position(c_base_player* entity, int hitbox_id);
-	float		  GetPlayerXY();
 	player_info_t GetPlayerInfo();
 	bool		  IsNotTarget();
 	bool          IsAlive();
@@ -401,32 +381,32 @@ public:
 	bool		  IsDying();
 	bool          IsUnknown();
 	bool		  IsFlashed();
+	bool          DrawSpecificEntity();
 	bool          HasC4();
 	bool          CanSeePlayer(c_base_player* player, const Vector& pos);
 	int& m_nMoveType();
 	QAngle& GetAbsAngles();
-	Vector& GetAbsAngles2();
 	void SetAbsAngles(const QAngle& wantedang);
-	void SetAngle2(Vector wantedang);
+	void SetAngle2(QAngle angle);
 	void UpdateClientSideAnimation();
 	void InvalidateBoneCache();
 	char* GetArmorIcon();
 	void PVSFix();
+	float m_flSpawnTime();
 
-	CCSPlayerAnimState* GetPlayerAnimState();
 	CAnimationLayer* GetAnimOverlay(int i);
 	CAnimationLayer* GetAnimOverlays();
 
 	QAngle* GetVAngles2();
 	int GetFOV();
 
-	CCSGOPlayerAnimState* GetPlayerAnimState2();
+	CCSGOPlayerAnimState* GetPlayerAnimState();
 
 	void ResetAnimationState(CCSGOPlayerAnimState* state);
 
 	static __forceinline c_base_player* GetPlayerByUserId(int id)
 	{
-		return static_cast<c_base_player*>(GetEntityByIndex(interfaces::engine_client->GetPlayerForUserID(id)));
+		return static_cast<c_base_player*>(GetEntityByIndex(g::engine_client->GetPlayerForUserID(id)));
 	}
 
 	static __forceinline c_base_player* GetPlayerByIndex(int i)

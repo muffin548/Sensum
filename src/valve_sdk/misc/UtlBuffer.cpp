@@ -1574,10 +1574,10 @@ BEGIN_CUSTOM_CHAR_CONVERSION(CUtlCStringConversion, s_StringCharConversion, "\""
 
 			// Set the out args
 			if (ppszInBufferPtr)
-				* ppszInBufferPtr = pszLine;
+				*ppszInBufferPtr = pszLine;
 
 			if (pnLineLength)
-				* pnLineLength = nLineLen;
+				*pnLineLength = nLineLen;
 
 			return true;
 		}

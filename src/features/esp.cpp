@@ -1,13 +1,14 @@
 #include "features.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../render/render.h"
 #include "../helpers/imdraw.h"
 #include "../helpers/console.h"
 #include "../helpers/entities.h"
 #include "../helpers/autowall.h"
-#include "../esp.hpp"
+#include "../features/esp.hpp"
 #include "../valve_sdk/interfaces/ISurface.h"
 #include "../render/fonts/undefeated.hpp"
+#include "../helpers/entities.h"
 
 ConVar* type = nullptr;
 ConVar* mode = nullptr;
@@ -25,19 +26,19 @@ namespace esp
 
 	bool is_enabled()
 	{
-		if (render::menu::is_visible() || !render::fonts::visuals)
+		if (!render::fonts::visuals || g::engine_client->IsConsoleVisible() || (!globals::esp_menu_opened && render::menu::is_visible()))
 			return false;
 
-		return interfaces::engine_client->IsInGame() && interfaces::local_player && settings::esp::enabled;
+		return g::engine_client->IsInGame() && g::local_player && settings::esp::enabled;
 	}
 
 	bool is_matchmaking()
 	{
 		if (!type)
-			type = interfaces::cvar->find("game_type");
+			type = g::cvar->find("game_type");
 
 		if (!mode)
-			mode = interfaces::cvar->find("game_mode");
+			mode = g::cvar->find("game_mode");
 
 		if (type->GetInt() != 0) //classic
 			return false;
@@ -77,6 +78,71 @@ namespace esp
 		return RECT{ (long)left, (long)top, (long)right, (long)bottom };
 	}
 
+	void render_helpers(ImDrawList* draw_list)
+	{
+		if (settings::misc::smoke_helper)
+		{
+			visuals::RenderInfo(draw_list);
+			visuals::RenderCircle(draw_list);
+		}
+
+		if (settings::misc::flash_helper)
+		{
+			visuals::RenderCirclePopflash(draw_list);
+		}
+	}
+
+	auto rotate_points(Vector* points, float rotation)->void
+	{
+		const auto points_center = (points[0] + points[1] + points[2]) / 3;
+		for (int k = 0; k < 3; k++)
+		{
+			auto& point = points[k];
+			point -= points_center;
+
+			const auto temp_x = point.x;
+			const auto temp_y = point.y;
+
+			const auto theta = DEG2RAD(rotation);
+			const auto c = cos(theta);
+			const auto s = sin(theta);
+
+			point.x = temp_x * c - temp_y * s;
+			point.y = temp_x * s + temp_y * c;
+
+			point += points_center;
+		}
+	};
+
+	auto render_dot(ImDrawList* draw_list, const Vector& origin, const QAngle& angles, const ImU32& color) -> void
+	{
+		const auto display_size = ImGui::GetIO().DisplaySize;
+		const auto screen_center = Vector(display_size.x * .5f, display_size.y * .5f);
+
+		QAngle aim_angles;
+		math::vector2angles(origin - g::local_player->m_vecOrigin(), aim_angles);
+
+		const auto angle_yaw_rad = DEG2RAD(angles.yaw - aim_angles.yaw - 90);
+
+		const auto size = 10;
+		const auto radius = 45;
+
+		const auto new_point_x = screen_center.x + ((((display_size.x - (size * 3)) * .5f) * (radius / 100.0f)) * cos(angle_yaw_rad)) + (int)(6.0f * (((float)size - 4.f) / 16.0f));
+		const auto new_point_y = screen_center.y + ((((display_size.y - (size * 3)) * .5f) * (radius / 100.0f)) * sin(angle_yaw_rad));
+
+		Vector points[3] =
+		{
+			Vector(new_point_x - size, new_point_y - size),
+			Vector(new_point_x + size, new_point_y),
+			Vector(new_point_x - size, new_point_y + size)
+		};
+
+		rotate_points(points, angles.yaw - aim_angles.yaw - 90.f);
+
+		draw_list->AddTriangleFilled({ points[0].x + 1.f, points[0].y + 1.f }, { points[1].x + 1.f, points[1].y + 1.f }, { points[2].x + 1.f, points[2].y + 1.f }, IM_COL32_BLACK);
+		draw_list->AddTriangleFilled({ points[0].x, points[0].y }, { points[1].x, points[1].y }, { points[2].x, points[2].y }, color);
+	}
+
 	void render(ImDrawList* draw_list)
 	{
 		if (!is_enabled())
@@ -94,12 +160,9 @@ namespace esp
 			entities::local_mutex.unlock();
 		}
 
-		if (settings::misc::smoke_helper)
-		{
-			visuals::RenderInfo(draw_list);
-			visuals::RenderCircle(draw_list);
-		}
-			
+		QAngle angles;
+		g::engine_client->GetViewAngles(angles);
+
 		static const auto white_color = ImGui::GetColorU32(ImVec4::White);
 		static const auto smoke_color = ImGui::GetColorU32(ImVec4(1.f, 1.f, 1.f, 0.4f));
 		static const auto orange_color = ImGui::GetColorU32(ImVec4::Orange);
@@ -111,7 +174,7 @@ namespace esp
 		ImGui::PushFont(render::fonts::visuals);
 
 		RECT box;
-		for (const auto& data : m_entities) //auto
+		for (const auto& data : m_entities)
 		{
 			if (data.index == 0 || !data.hitboxes[0][0].IsValid())
 				continue;
@@ -119,11 +182,20 @@ namespace esp
 			const auto bbox = get_box(data.points);
 
 			const auto on_screen = (bbox.left > 0 || bbox.right > 0) && (bbox.top > 0 || bbox.bottom > 0);
-			if (settings::esp::offscreen && (!on_screen || g::local_player->m_bIsScoped()))
-				offscreen_entities::dot(m_local.world_pos, data.hitboxes[0][0], offscreen_entities::origin_color);
+			if (settings::esp::offscreen && !render::menu::is_visible() && (!on_screen || g::local_player->m_bIsScoped()))
+				render_dot(draw_list, data.origin, angles, IM_COL32(255, 0, 50, 255));
 
 			if (settings::esp::visible_only && (!data.is_visible || data.in_smoke || m_local.is_flashed || !on_screen))
 				continue;
+
+			/*if (settings::esp::visible_only)
+			{
+				if (!data.draw_entity)
+				{
+					if (!data.is_visible || data.in_smoke || m_local.is_flashed || !on_screen)
+						continue;
+				}
+			}*/
 
 			{
 				bool at_screen = true;
@@ -169,6 +241,62 @@ namespace esp
 			const auto height = box.bottom - box.top;
 
 			const auto box_color = data.is_dormant ? smoke_color : data.is_visible && !data.in_smoke && !m_local.is_flashed ? visible_color : occluded_color;
+
+			if (settings::esp::bone_esp)
+			{
+				for (int i = 1; i <= g::entity_list->GetHighestEntityIndex(); i++)
+				{
+					c_base_player* entity = c_base_player::GetPlayerByIndex(i);
+
+					if (!entity || !entity->IsPlayer() || entity == g::local_player)
+						continue;
+
+					if (settings::esp::visible_only && !g::local_player->CanSeePlayer(entity, entity->get_hitbox_position(entity, HITBOX_CHEST)))
+						continue;
+
+					studiohdr_t* pStudioHdr = g::mdl_info->GetStudiomodel(entity->GetModel());
+
+					if (!pStudioHdr)
+						continue;
+
+					Vector vParent, vChild, sParent, sChild;
+
+					for (int j = 0; j < pStudioHdr->numbones; j++)
+					{
+						mstudiobone_t* pBone = pStudioHdr->GetBone(j);
+
+						if (pBone && (pBone->flags & BONE_USED_BY_HITBOX) && (pBone->parent != -1))
+						{
+							vChild = entity->get_bone_position(j);
+							vParent = entity->get_bone_position(pBone->parent);
+
+							int iChestBone = 6;
+							Vector vBreastBone;
+							Vector vUpperDirection = entity->get_bone_position(iChestBone + 1) - entity->get_bone_position(iChestBone);
+							vBreastBone = entity->get_bone_position(iChestBone) + vUpperDirection / 2;
+							Vector vDeltaChild = vChild - vBreastBone;
+							Vector vDeltaParent = vParent - vBreastBone;
+
+							if ((vDeltaParent.Length() < 9 && vDeltaChild.Length() < 9))
+								vParent = vBreastBone;
+
+							if (j == iChestBone - 1)
+								vChild = vBreastBone;
+
+							if (abs(vDeltaChild.z) < 5 && (vDeltaParent.Length() < 5 && vDeltaChild.Length() < 5) || j == iChestBone)
+								continue;
+
+							if (entity->IsAlive() && !entity->IsDormant() && entity->m_iTeamNum() != g::local_player->m_iTeamNum())
+							{
+								if (math::world2screen(vParent, sParent) && math::world2screen(vChild, sChild))
+								{
+									globals::draw_list->AddLine(ImVec2(sParent.x, sParent.y), ImVec2(sChild.x, sChild.y), utils::to_im32(settings::esp::bone_esp_color));
+								}
+							}
+						}
+					}
+				}
+			}
 
 			if (settings::esp::names)
 			{
@@ -464,9 +592,7 @@ void VGSHelper::DrawRing3D(int16_t x, int16_t y, int16_t z, int16_t radius, uint
 			end22d.x = end2d.x;
 			end22d.y = end2d.y;
 
-			VGSHelper::Get().DrawLine(start22d[0], start22d[1], end22d[0], end22d[1], Color::White);
-
-			//DrawLine(start22d, end22d, color1, thickness);
+			VGSHelper::Get().DrawLine(start22d[0], start22d[1], end22d[0], end22d[1], color1, thickness);
 		}
 	}
 }

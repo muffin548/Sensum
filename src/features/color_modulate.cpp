@@ -1,6 +1,6 @@
 #include "features.h"
-#include "../globals.h"
-#include "../options.hpp"
+#include "../settings/globals.h"
+#include "../settings/options.hpp"
 #include "../helpers/console.h"
 
 namespace color_modulation
@@ -52,19 +52,19 @@ namespace color_modulation
 
 		if (!r_3dsky)
 		{
-			r_3dsky = interfaces::cvar->find("r_3dsky");
+			r_3dsky = g::cvar->find("r_3dsky");
 			r_3dsky->m_fnChangeCallbacks.m_Size = 0;
 		}
 
 		if (!r_DrawSpecificStaticProp)
 		{
-			r_DrawSpecificStaticProp = interfaces::cvar->find("r_drawspecificstaticprop");
+			r_DrawSpecificStaticProp = g::cvar->find("r_drawspecificstaticprop");
 			r_DrawSpecificStaticProp->m_fnChangeCallbacks.m_Size = 0;
 		}
 
 		reinterpret_cast<void(__fastcall*)(const char*)>(sky_fn_offset)(xorstr_("vertigo"));
 
-		static auto sv_skyname = interfaces::cvar->find(xorstr_("sv_skyname"));
+		static auto sv_skyname = g::cvar->find(xorstr_("sv_skyname"));
 
 		r_3dsky->SetValue(0);
 		r_DrawSpecificStaticProp->SetValue(settings::visuals::night_mode ? 0 : 1);
@@ -112,9 +112,9 @@ namespace color_modulation
 		return false;
 	}
 
-	void SkyChanger()
+	void sky_changer()
 	{
-		static auto sv_skyname = interfaces::cvar->find(xorstr_("sv_skyname"));
+		static auto sv_skyname = g::cvar->find(xorstr_("sv_skyname"));
 
 		auto sv_skyname_backup = g::cvar->find("sv_skyname")->GetString();
 
@@ -123,73 +123,76 @@ namespace color_modulation
 
 		switch (settings::visuals::skychanger_mode)
 		{
-		case 0: //Baggage
+		case 0:
+			return;
+			break;
+		case 1: //Baggage
 			sv_skyname->SetValue("cs_baggage_skybox");
 			break;
-		case 1: //Tibet
+		case 2: //Tibet
 			sv_skyname->SetValue("cs_tibet");
 			break;
-		case 2: //Embassy
+		case 3: //Embassy
 			sv_skyname->SetValue("embassy");
 			break;
-		case 3: //Italy
+		case 4: //Italy
 			sv_skyname->SetValue("italy");
 			break;
-		case 4: //Daylight 1
+		case 5: //Daylight 1
 			sv_skyname->SetValue("sky_cs15_daylight01_hdr");
 			break;
-		case 5: //Daylight 2
+		case 6: //Daylight 2
 			sv_skyname->SetValue("sky_cs15_daylight02_hdr");
 			break;
-		case 6: //Daylight 3
+		case 7: //Daylight 3
 			sv_skyname->SetValue("sky_cs15_daylight03_hdr");
 			break;
-		case 7: //Daylight 4
+		case 8: //Daylight 4
 			sv_skyname->SetValue("sky_cs15_daylight04_hdr");
 			break;
-		case 8: //Cloudy
+		case 9: //Cloudy
 			sv_skyname->SetValue("sky_csgo_cloudy01");
 			break;
-		case 9: //Night 1
+		case 10: //Night 1
 			sv_skyname->SetValue("sky_csgo_night02");
 			break;
-		case 10: //Night 2
+		case 11: //Night 2
 			sv_skyname->SetValue("sky_csgo_night02b");
 			break;
-		case 11: //Night Flat
+		case 12: //Night Flat
 			sv_skyname->SetValue("sky_csgo_night_flat");
 			break;
-		case 12: //Day HD
+		case 13: //Day HD
 			sv_skyname->SetValue("sky_day02_05_hdr");
 			break;
-		case 13: //Day
+		case 14: //Day
 			sv_skyname->SetValue("sky_day02_05");
 			break;
-		case 14: //Rural
+		case 15: //Rural
 			sv_skyname->SetValue("sky_l4d_rural02_ldr");
 			break;
-		case 15: //Vertigo HD
+		case 16: //Vertigo HD
 			sv_skyname->SetValue("vertigo_hdr");
 			break;
-		case 16: //Vertigo Blue HD
+		case 17: //Vertigo Blue HD
 			sv_skyname->SetValue("vertigoblue_hdr");
 			break;
-		case 17: //Vertigo
+		case 18: //Vertigo
 			sv_skyname->SetValue("vertigo");
 			break;
-		case 18: //Vietnam
+		case 19: //Vietnam
 			sv_skyname->SetValue("vietnam");
 			break;
-		case 19: //Dusty Sky
+		case 20: //Dusty Sky
 			sv_skyname->SetValue("sky_dust");
 			break;
-		case 20: //Jungle
+		case 21: //Jungle
 			sv_skyname->SetValue("jungle");
 			break;
-		case 21: //Nuke
+		case 22: //Nuke
 			sv_skyname->SetValue("nukeblank");
 			break;
-		case 22: //Office
+		case 23: //Office
 			sv_skyname->SetValue("office");
 			break;
 		default:
@@ -199,37 +202,37 @@ namespace color_modulation
 
 	void set_convars()
 	{
-		static auto r_modelAmbientMin = interfaces::cvar->find(xorstr_("r_modelAmbientMin"));
-		static auto mat_postprocess_enable = interfaces::cvar->find(xorstr_("mat_postprocess_enable"));
-		static auto mat_force_tonemap_scale = interfaces::cvar->find(xorstr_("mat_force_tonemap_scale"));
+		static auto r_modelAmbientMin = g::cvar->find(xorstr_("r_modelAmbientMin"));
+		static auto mat_postprocess_enable = g::cvar->find(xorstr_("mat_postprocess_enable"));
+		static auto mat_force_tonemap_scale = g::cvar->find(xorstr_("mat_force_tonemap_scale"));
 
 		if (!viewmodel_fov)
 		{
-			viewmodel_fov = interfaces::cvar->find(xorstr_("viewmodel_fov"));
+			viewmodel_fov = g::cvar->find(xorstr_("viewmodel_fov"));
 			viewmodel_fov->m_fnChangeCallbacks.m_Size = 0;
 		}
 
 		if (!debug_fov)
 		{
-			debug_fov = interfaces::cvar->find(xorstr_("fov_cs_debug"));
+			debug_fov = g::cvar->find(xorstr_("fov_cs_debug"));
 			debug_fov->m_fnChangeCallbacks.m_Size = 0;
 		}
 
 		if (!viewmodel_offset_x)
 		{
-			viewmodel_offset_x = interfaces::cvar->find(xorstr_("viewmodel_offset_x"));
+			viewmodel_offset_x = g::cvar->find(xorstr_("viewmodel_offset_x"));
 			viewmodel_offset_x->m_fnChangeCallbacks.m_Size = 0;
 		}
 
 		if (!viewmodel_offset_y)
 		{
-			viewmodel_offset_y = interfaces::cvar->find(xorstr_("viewmodel_offset_y"));
+			viewmodel_offset_y = g::cvar->find(xorstr_("viewmodel_offset_y"));
 			viewmodel_offset_y->m_fnChangeCallbacks.m_Size = 0;
 		}
 
 		if (!viewmodel_offset_z)
 		{
-			viewmodel_offset_z = interfaces::cvar->find(xorstr_("viewmodel_offset_z"));
+			viewmodel_offset_z = g::cvar->find(xorstr_("viewmodel_offset_z"));
 			viewmodel_offset_z->m_fnChangeCallbacks.m_Size = 0;
 		}
 
@@ -261,30 +264,30 @@ namespace color_modulation
 		}
 	}
 
-	void SetMatForce()
+	void set_material_tone()
 	{
 		if (!settings::visuals::night_mode)
 			return;
 
-		static auto mat_force_tonemap_scale = interfaces::cvar->find(xorstr_("mat_force_tonemap_scale"));
+		static auto mat_force_tonemap_scale = g::cvar->find(xorstr_("mat_force_tonemap_scale"));
 
 		mat_force_tonemap_scale->SetValue(settings::esp::mfts);
 	}
 
 	void sniper_crosshair()
 	{
-		if (!interfaces::local_player)
+		if (!g::local_player)
 			return;
 
-		bool is_scoped = interfaces::local_player->m_bIsScoped();
-		if (!interfaces::local_player->IsAlive() && interfaces::local_player->m_hObserverTarget())
+		bool is_scoped = g::local_player->m_bIsScoped();
+		if (!g::local_player->IsAlive() && g::local_player->m_hObserverTarget())
 		{
-			auto observer = (c_base_player*)c_base_player::GetEntityFromHandle(interfaces::local_player->m_hObserverTarget());
+			auto observer = (c_base_player*)c_base_player::GetEntityFromHandle(g::local_player->m_hObserverTarget());
 			if (observer && observer->IsPlayer())
 				is_scoped = observer->m_bIsScoped();
 		}
 
-		static auto weapon_debug_spread_show = interfaces::cvar->find(xorstr_("weapon_debug_spread_show"));
+		static auto weapon_debug_spread_show = g::cvar->find(xorstr_("weapon_debug_spread_show"));
 
 		if (settings::visuals::sniper_crosshair)
 		{
@@ -326,14 +329,15 @@ namespace color_modulation
 		arms_wireframe_state = settings::chams::arms::wireframe;
 
 		set_convars();
-		SetMatForce();
+		set_material_tone();
+		sky_changer();
 
 		static auto sv_skyname_backup = g::cvar->find("sv_skyname")->GetString();
-		static auto sv_skyname = interfaces::cvar->find(xorstr_("sv_skyname"));
+		static auto sv_skyname = g::cvar->find(xorstr_("sv_skyname"));
 
-		for (auto i = interfaces::mat_system->FirstMaterial(); i != interfaces::mat_system->InvalidMaterial(); i = interfaces::mat_system->NextMaterial(i))
+		for (auto i = g::mat_system->FirstMaterial(); i != g::mat_system->InvalidMaterial(); i = g::mat_system->NextMaterial(i))
 		{
-			auto* material = interfaces::mat_system->GetMaterial(i);
+			auto* material = g::mat_system->GetMaterial(i);
 			if (!material)
 				continue;
 
@@ -363,7 +367,7 @@ namespace color_modulation
 			}
 
 			if (!night_mode_first)
-				if (settings::visuals::night_mode) 
+				if (settings::visuals::night_mode)
 					night_mode_first = true; //Thanks, Credits to Klavaro - MartiNJ409
 				else continue;
 

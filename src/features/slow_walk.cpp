@@ -1,5 +1,5 @@
 #include "features.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../helpers/console.h"
 #include "../helpers/input.h"
 
@@ -7,13 +7,13 @@ namespace slow_walk
 {
 	bool is_enabled(CUserCmd* cmd)
 	{
-		if (!interfaces::local_player || !interfaces::local_player->IsAlive())
+		if (!g::local_player || !g::local_player->IsAlive())
 			return false;
 
 		if (globals::binds::slow_walk == 0 || !input_system::is_key_down(globals::binds::slow_walk))
 			return false;
 
-		auto weapon_handle = interfaces::local_player->m_hActiveWeapon();
+		auto weapon_handle = g::local_player->m_hActiveWeapon();
 		if (!weapon_handle)
 			return false;
 
@@ -26,7 +26,7 @@ namespace slow_walk
 			return;
 
 		const float amount = 0.0034f * 60.f;
-		const auto velocity = interfaces::local_player->m_vecVelocity();
+		const auto velocity = g::local_player->m_vecVelocity();
 
 		QAngle direction;
 		math::vector2angles(velocity, direction);
@@ -39,7 +39,7 @@ namespace slow_walk
 
 		Vector source = forward * -speed;
 
-		auto weapon_data = uintptr_t(interfaces::local_player->m_hActiveWeapon()->get_weapon_data());
+		auto weapon_data = uintptr_t(g::local_player->m_hActiveWeapon()->get_weapon_data());
 		const auto max_weapon_speed = /**reinterpret_cast<float*>(weapon_data + 0x0134)*/ 250.f;
 		if (speed >= max_weapon_speed * amount)
 		{

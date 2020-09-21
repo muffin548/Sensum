@@ -147,8 +147,8 @@ public:
 		return CallVFunction<IMatRenderContext * (__thiscall*)(PVOID)>(this, 115)(this);
 	}
 
-	bool& m_bGameStarted(uint32_t offset)
+	bool& IsGameStarted()
 	{
-		return *(bool*)((uintptr_t)this + offset);
+		return *(bool*)(uintptr_t(this) + 0x2C68);
 	}
 };

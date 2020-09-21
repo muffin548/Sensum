@@ -1,5 +1,5 @@
 #include "features.h"
-#include "../options.hpp"
+#include "../settings/options.hpp"
 
 namespace no_smoke
 {
@@ -22,7 +22,7 @@ namespace no_smoke
 
 		for (const auto& name : material_names)
 		{
-			auto material = interfaces::mat_system->FindMaterial(name.c_str(), TEXTURE_GROUP_CLIENT_EFFECTS);
+			auto material = g::mat_system->FindMaterial(name.c_str(), TEXTURE_GROUP_CLIENT_EFFECTS);
 			if (material)
 				material->SetMaterialVarFlag(MATERIAL_VAR_WIREFRAME, last_value);
 		}
@@ -37,7 +37,7 @@ namespace no_smoke
 			smoke_count = *reinterpret_cast<DWORD*>(offset + 0x8);
 
 		if (settings::misc::no_smoke)
-			* reinterpret_cast<int*>(smoke_count) = 0;
+			*reinterpret_cast<int*>(smoke_count) = 0;
 
 		if (last_value != settings::misc::no_smoke)
 			event();

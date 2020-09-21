@@ -68,6 +68,8 @@ namespace entities
 		bool is_c4_carrier;
 		bool has_defkit;
 		bool is_desyncing;
+		bool draw_entity;
+		bool sound;
 
 		c_base_combat_weapon* weapData;
 
@@ -77,7 +79,7 @@ namespace entities
 		float m_iHealth;
 		float m_iMoney;
 		float m_iAmmo;
-		float m_MaxAmmo; //was int
+		float m_MaxAmmo;
 		float m_ArmorValue;
 		float m_flShotTime;
 		float m_flSimulationTime;
@@ -109,4 +111,13 @@ namespace entities
 	extern std::list<tick_data_t> m_items;
 
 	void fetch_targets(CUserCmd* cmd);
+
+	struct sound_t
+	{
+		int index = 0;
+		Vector origin;
+	};
+
+	inline std::mutex m_mutex_sounds;
+	inline sound_t m_sounds[MAX_PLAYERS];
 }

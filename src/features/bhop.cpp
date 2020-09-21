@@ -5,10 +5,10 @@ auto should_fake_jump = false;
 
 void features::bhop(CUserCmd* cmd)
 {
-	if (!interfaces::local_player || !interfaces::local_player->IsAlive())
+	if (!g::local_player || !g::local_player->IsAlive())
 		return;
 
-	if (interfaces::local_player->m_nMoveType() == MOVETYPE_LADDER)
+	if (g::local_player->m_nMoveType() == MOVETYPE_LADDER)
 		return;
 
 	if (!jumped_last_tick && should_fake_jump)
@@ -18,7 +18,7 @@ void features::bhop(CUserCmd* cmd)
 	}
 	else if (cmd->buttons & IN_JUMP)
 	{
-		if (interfaces::local_player->m_fFlags() & FL_ONGROUND)
+		if (g::local_player->m_fFlags() & FL_ONGROUND)
 		{
 			jumped_last_tick = true;
 			should_fake_jump = true;

@@ -2,7 +2,7 @@
 #include "utils.h"
 #include "console.h"
 #include "autowall.h"
-#include "../settings.h"
+#include "../settings/settings.h"
 #include "../valve_sdk/interfaces/IEngineTrace.hpp"
 
 #include <math.h>
@@ -83,7 +83,7 @@ namespace autowall
 			distance += 4.0f;
 			end = start + dir * distance;
 
-			auto point_contents = interfaces::engine_trace->GetPointContents(end, MASK_SHOT_HULL | CONTENTS_HITBOX, NULL);
+			auto point_contents = g::engine_trace->GetPointContents(end, MASK_SHOT_HULL | CONTENTS_HITBOX, NULL);
 
 			if (point_contents & MASK_SHOT_HULL && !(point_contents & CONTENTS_HITBOX))
 				continue;
@@ -92,7 +92,7 @@ namespace autowall
 
 			Ray_t ray;
 			ray.Init(end, new_end);
-			interfaces::engine_trace->trace_ray(ray, MASK_SHOT, 0, exit_trace);
+			g::engine_trace->trace_ray(ray, MASK_SHOT, 0, exit_trace);
 
 			if (exit_trace->startsolid && exit_trace->surface.flags & SURF_HITBOX)
 			{
@@ -101,7 +101,7 @@ namespace autowall
 				CTraceFilter filter;
 				filter.pSkip = exit_trace->hit_entity;
 
-				interfaces::engine_trace->trace_ray(ray, 0x600400B, &filter, exit_trace);
+				g::engine_trace->trace_ray(ray, 0x600400B, &filter, exit_trace);
 
 				if ((exit_trace->fraction < 1.0f || exit_trace->allsolid) && !exit_trace->startsolid)
 				{
@@ -116,7 +116,7 @@ namespace autowall
 			{
 				if (exit_trace->hit_entity)
 				{
-					if (enter_trace->hit_entity && enter_trace->hit_entity == interfaces::entity_list->GetClientEntity(0))
+					if (enter_trace->hit_entity && enter_trace->hit_entity == g::entity_list->GetClientEntity(0))
 						return true;
 				}
 
@@ -140,7 +140,7 @@ namespace autowall
 
 	bool handle_bullet_penetration(CCSWeaponInfo* weapon_data, fire_bullet_data& data)
 	{
-		surfacedata_t* enter_surface_data = interfaces::physics_surface->GetSurfaceData(data.enter_trace.surface.surfaceProps);
+		surfacedata_t* enter_surface_data = g::physics_surface->GetSurfaceData(data.enter_trace.surface.surfaceProps);
 		int enter_material = enter_surface_data->game.material;
 		float enter_surf_penetration_mod = enter_surface_data->game.flPenetrationModifier;
 
@@ -159,7 +159,7 @@ namespace autowall
 		if (!trace_to_exit(dummy, &data.enter_trace, data.enter_trace.endpos, data.direction, &trace_exit))
 			return false;
 
-		surfacedata_t* exit_surface_data = interfaces::physics_surface->GetSurfaceData(trace_exit.surface.surfaceProps);
+		surfacedata_t* exit_surface_data = g::physics_surface->GetSurfaceData(trace_exit.surface.surfaceProps);
 		int exit_material = exit_surface_data->game.material;
 
 		float exit_surf_penetration_mod = *(float*)((uint8_t*)exit_surface_data + 76);
@@ -214,7 +214,7 @@ namespace autowall
 		CTraceFilter filter;
 		filter.pSkip = ignore;
 
-		interfaces::engine_trace->trace_ray(ray, mask, &filter, ptr);
+		g::engine_trace->trace_ray(ray, mask, &filter, ptr);
 	}
 
 	bool simulate_fire_bullet(c_base_player* ignore, c_base_combat_weapon* weapon, fire_bullet_data& data)
@@ -230,12 +230,12 @@ namespace autowall
 			data.trace_length_remaining = weapon_data->flRange - data.trace_length;
 			Vector end = data.src + data.direction * data.trace_length_remaining;
 
-			//trace_line(data.src, end, MASK_SHOT, ignore, &data.enter_trace);
+			trace_line(data.src, end, MASK_SHOT, ignore, &data.enter_trace); //was commented
 
-			//Ray_t ray;
-			//ray.Init(data.src, end + data.direction * 40.f);
+			Ray_t ray; //was commented
+			ray.Init(data.src, end + data.direction * 40.f); //was commented
 
-			//interfaces::engine_trace->trace_ray(ray, MASK_SHOT, &data.filter, &data.enter_trace);
+			g::engine_trace->trace_ray(ray, MASK_SHOT, &data.filter, &data.enter_trace); //was commented
 
 			trace_line(data.src, end + data.direction * 40.f, MASK_SHOT, ignore, &data.enter_trace);
 
@@ -265,7 +265,7 @@ namespace autowall
 
 	float get_damage(const Vector& point)
 	{
-		return get_damage(interfaces::local_player, point);
+		return get_damage(g::local_player, point);
 	}
 
 	float get_damage(c_base_player* player, const Vector& point)

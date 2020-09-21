@@ -7,9 +7,9 @@
 #include <type_traits>
 #include <cctype>
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 #define DUMP_NETVARS
-#endif
+//#endif
 
 #ifdef DUMP_NETVARS
 #define IF_DUMPING(...) __VA_ARGS__
@@ -17,13 +17,15 @@
 #define IF_DUMPING(...)
 #endif
 
+DUMP_NETVARS;
+
 IF_DUMPING(static FILE* s_fp;)
 
 netvar_manager::netvar_manager()
 {
 	IF_DUMPING(fopen_s(&s_fp, "netvar_dump.txt", "w");)
 
-		for (auto clazz = interfaces::base_client->GetAllClasses(); clazz; clazz = clazz->m_pNext)
+		for (auto clazz = g::base_client->GetAllClasses(); clazz; clazz = clazz->m_pNext)
 			if (clazz->m_pRecvTable)
 				dump_recursive(clazz->m_pNetworkName, clazz->m_pRecvTable, 0);
 

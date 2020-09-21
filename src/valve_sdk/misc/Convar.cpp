@@ -521,7 +521,7 @@ void ConVar::InternalSetValue(const char* value)
 	char  tempVal[32];
 	char* val;
 
-	auto temp = *(uint32_t*)& m_Value.m_fValue ^ (uint32_t)this;
+	auto temp = *(uint32_t*)&m_Value.m_fValue ^ (uint32_t)this;
 	float flOldValue = *(float*)(&temp);
 
 	val = (char*)value;
@@ -533,8 +533,8 @@ void ConVar::InternalSetValue(const char* value)
 	}
 
 	// Redetermine value
-	*(uint32_t*)& m_Value.m_fValue = *(uint32_t*)& fNewValue ^ (uint32_t)this;
-	*(uint32_t*)& m_Value.m_nValue = (uint32_t)fNewValue ^ (uint32_t)this;
+	*(uint32_t*)&m_Value.m_fValue = *(uint32_t*)&fNewValue ^ (uint32_t)this;
+	*(uint32_t*)&m_Value.m_nValue = (uint32_t)fNewValue ^ (uint32_t)this;
 
 	if (!(m_nFlags & FCVAR_NEVER_AS_STRING)) {
 		ChangeStringValue(val, flOldValue);
@@ -564,8 +564,8 @@ void ConVar::ChangeStringValue(const char* tempVal, float flOldValue)
 		m_fnChangeCallbacks[i](this, pszOldValue, flOldValue);
 	}
 
-	if (interfaces::cvar)
-		interfaces::cvar->call_callbacks(this, pszOldValue, flOldValue);
+	if (g::cvar)
+		g::cvar->call_callbacks(this, pszOldValue, flOldValue);
 }
 
 bool ConVar::ClampValue(float& value)
@@ -592,8 +592,8 @@ void ConVar::InternalSetFloatValue(float fNewValue)
 
 	// Redetermine value
 	float flOldValue = m_Value.m_fValue;
-	*(uint32_t*)& m_Value.m_fValue = *(uint32_t*)& fNewValue ^ (uint32_t)this;
-	*(uint32_t*)& m_Value.m_nValue = (uint32_t)fNewValue ^ (uint32_t)this;
+	*(uint32_t*)&m_Value.m_fValue = *(uint32_t*)&fNewValue ^ (uint32_t)this;
+	*(uint32_t*)&m_Value.m_nValue = (uint32_t)fNewValue ^ (uint32_t)this;
 
 	if (!(m_nFlags & FCVAR_NEVER_AS_STRING)) {
 		char tempVal[32];
@@ -617,8 +617,8 @@ void ConVar::InternalSetIntValue(int nValue)
 
 	// Redetermine value
 	float flOldValue = m_Value.m_fValue;
-	*(uint32_t*)& m_Value.m_fValue = *(uint32_t*)& fValue ^ (uint32_t)this;
-	*(uint32_t*)& m_Value.m_nValue = *(uint32_t*)& nValue ^ (uint32_t)this;
+	*(uint32_t*)&m_Value.m_fValue = *(uint32_t*)&fValue ^ (uint32_t)this;
+	*(uint32_t*)&m_Value.m_nValue = *(uint32_t*)&nValue ^ (uint32_t)this;
 
 	if (!(m_nFlags & FCVAR_NEVER_AS_STRING)) {
 		char tempVal[32];
@@ -661,8 +661,8 @@ void ConVar::Create(const char* pName, const char* pDefaultValue, int flags /*= 
 
 	float value = (float)atof(m_Value.m_pszString);
 
-	*(uint32_t*)& m_Value.m_fValue = *(uint32_t*)& value ^ (uint32_t)this;
-	*(uint32_t*)& m_Value.m_nValue = *(uint32_t*)& value ^ (uint32_t)this;
+	*(uint32_t*)&m_Value.m_fValue = *(uint32_t*)&value ^ (uint32_t)this;
+	*(uint32_t*)&m_Value.m_nValue = *(uint32_t*)&value ^ (uint32_t)this;
 
 	BaseClass::Create(pName, pHelpString, flags);
 }

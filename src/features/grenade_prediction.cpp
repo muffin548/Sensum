@@ -1,5 +1,5 @@
 #include "features.h"
-#include "../options.hpp"
+#include "../settings/options.hpp"
 #include "../render/render.h"
 #include "../helpers/math.h"
 #include "../helpers/utils.h"
@@ -9,7 +9,7 @@
 #include <mutex>
 
 #define CHECK_VALID( _v)    0
-FORCEINLINE vec_t DotProduct(const Vector & a, const Vector & b)
+FORCEINLINE vec_t DotProduct(const Vector& a, const Vector& b)
 {
 	CHECK_VALID(a);
 	CHECK_VALID(b);
@@ -54,10 +54,10 @@ namespace grenade_prediction
 
 	bool is_enabled(CUserCmd* cmd)
 	{
-		if (!interfaces::local_player)
+		if (!g::local_player)
 			return false;
 
-		player = interfaces::local_player;
+		player = g::local_player;
 		if (player->IsAlive())
 			Tick(cmd->buttons);
 		else if (player->m_hObserverTarget())
@@ -72,7 +72,7 @@ namespace grenade_prediction
 			return false;
 
 		weapon = player->m_hActiveWeapon();
-		if (!weapon || !weapon->is_grenade())
+		if (!weapon || !weapon->IsGrenade())
 			return false;
 
 		return true;
@@ -95,7 +95,7 @@ namespace grenade_prediction
 		Vector vecSrc, vecThrow;
 		Setup(vecSrc, vecThrow, cmd->viewangles);
 
-		float interval = interfaces::global_vars->interval_per_tick;
+		float interval = g::global_vars->interval_per_tick;
 		int logstep = static_cast<int>(0.05f / interval);
 		int logtimer = 0;
 
@@ -182,7 +182,7 @@ namespace grenade_prediction
 		Vector vForward, vRight, vUp;
 		math::angle2vectors(angThrow, &vForward, &vRight, &vUp);
 
-		vecSrc = interfaces::local_player->GetEyePos();
+		vecSrc = g::local_player->GetEyePos();
 		float off = (power[act] * 12.0f) - 12.0f;
 		vecSrc.z += off;
 
@@ -196,7 +196,7 @@ namespace grenade_prediction
 		vecSrc = tr.endpos;
 		vecSrc -= vecBack;
 
-		vecThrow = interfaces::local_player->m_vecVelocity(); vecThrow *= 1.25f;
+		vecThrow = g::local_player->m_vecVelocity(); vecThrow *= 1.25f;
 		vecThrow += vForward * flVel;
 	}
 
@@ -249,7 +249,7 @@ namespace grenade_prediction
 
 		CTraceFilterWorldAndPropsOnly filter;
 
-		interfaces::engine_trace->trace_ray(ray, 0x200400B, &filter, &tr);
+		g::engine_trace->trace_ray(ray, 0x200400B, &filter, &tr);
 	}
 
 	void PushEntity(Vector& src, const Vector& move, trace_t& tr)
@@ -324,7 +324,7 @@ namespace grenade_prediction
 
 	void render(ImDrawList* draw_list)
 	{
-		if (render::menu::is_visible())
+		if (render::menu::is_visible() || !g::engine_client->IsInGame() || !g::engine_client->IsConnected())
 			return;
 
 		if (render_mutex.try_lock())
@@ -347,8 +347,10 @@ namespace grenade_prediction
 			draw_list->AddLine(ImVec2(point.first.x, point.first.y), ImVec2(point.second.x, point.second.y), was_flashed ? black_color : white_color, 1.5f);
 		}
 
-		const auto last_point = saved_points[saved_points.size() - 1].second; //here edited
-		//draw_list->AddCircleFilled(ImVec2(last_point.x, last_point.y), 5.f, red_color);
+		const auto last_point = saved_points[saved_points.size() - 1].second;
 		draw_list->AddCircle(ImVec2(last_point.x, last_point.y), 5.f, red_color);
+
+		const auto first_point = saved_points.at(0);
+		draw_list->AddRectFilled(ImVec2(first_point.first.x - 5.f, first_point.first.y - 5.f), ImVec2(first_point.second.x + 5.f, first_point.second.y + 5.f), was_flashed ? black_color : white_color);
 	}
 }

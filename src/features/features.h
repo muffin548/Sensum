@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../settings.h"
+#include "../settings/settings.h"
 #include "../helpers/math.h"
 #include "../valve_sdk/csgostructs.hpp"
 #include <vector>
@@ -8,28 +8,27 @@
 namespace features
 {
 	void bhop(CUserCmd* cmd);
-	void moon_walk(CUserCmd* cmd);
 	void auto_strafe(CUserCmd* cmd);
 	void thirdperson();
-	void human_bhop(CUserCmd* cmd);
-	void SelfNade(CUserCmd* cmd);
-	void fastStop(CUserCmd* cmd);
-	void edgeJumpPre(CUserCmd* cmd) noexcept;
-	void edgeJumpPost(CUserCmd* cmd) noexcept;
-	void blockBot(CUserCmd* cmd);
+	void fast_stop(CUserCmd* cmd);
+	void edge_jump_pre(CUserCmd* cmd);
+	void edge_jump_post(CUserCmd* cmd);
+}
+
+namespace spy_camera
+{
+	void on_render_view(CViewSetup& view);
+	void on_end_scene();
+	void on_fire_event();
+	void on_frame_render_start();
 }
 
 namespace color_modulation
 {
 	void event();
 	void handle();
-	void SkyChanger();
-	void SetMatForce();
-}
-
-namespace fake_lags
-{
-	void handle(CUserCmd* cmd, bool& send_packet);
+	void sky_changer();
+	void set_material_tone();
 }
 
 namespace visuals
@@ -38,29 +37,31 @@ namespace visuals
 	void render(ImDrawList* draw_list);
 	void more_chams() noexcept;
 	void glow() noexcept;
-	void glow_override() noexcept;
 	void RenderPunchCross();
 	void RenderHitmarker();
 	void RenderNoScopeOverlay();
 	void SpreadCircle();
 	void bomb_esp(c_planted_c4* entity) noexcept;
 	void DrawFov(); //todo
-	void Choke();
 	void DesyncChams();
 	void AAIndicator();
 	void KnifeLeft();
 	void DrawRing3D();
+	void DrawRing3DPopflash();
 	void DrawDamageIndicator();
 	void runCM(CUserCmd* cmd);
 	void RenderInfo(ImDrawList* draw_list);
 	void RenderCircle(ImDrawList* draw_list);
-	void remove_3dsky();
-	void remove_shadows();
+	void RenderCirclePopflash(ImDrawList* draw_list);
+	void SmokeHelperAimbot(CUserCmd* cmd);
+	void PopflashHelperAimbot(CUserCmd* cmd);
+	void BoneESP();
 }
 
 namespace esp
 {
 	void render(ImDrawList* draw_list);
+	void render_helpers(ImDrawList* draw_list);
 }
 
 namespace aimbot
@@ -69,12 +70,6 @@ namespace aimbot
 	void OnMove(CUserCmd* pCmd);
 	float get_fov();
 	float GetFov();
-}
-
-namespace glows
-{
-	void handle();
-	void shutdown();
 }
 
 namespace skins
@@ -89,8 +84,8 @@ namespace skins
 	extern std::vector<weapon_name_t> glove_names;
 
 	void save();
-	void LoadStatrack();
-	void SaveStatrack();
+	void load_statrack();
+	void save_statrack();
 	void load();
 	void initialize_kits();
 
@@ -118,13 +113,15 @@ namespace grenade_prediction
 	void Setup(Vector& vecSrc, Vector& vecThrow, QAngle viewangles);
 }
 
+namespace entities
+{
+	void on_create_move(CUserCmd* cmd);
+}
+
 namespace offscreen_entities
 {
 	extern ImU32 sound_color;
 	extern ImU32 origin_color;
-
-	void dot(const Vector& origin, const Vector& pos, const ImU32& color);
-	void render(ImDrawList* draw_list);
 }
 
 namespace engine_prediction
@@ -150,11 +147,6 @@ namespace desync
 namespace slow_walk
 {
 	void handle(CUserCmd* cmd);
-}
-
-namespace knife_bot
-{
-	void handle(CUserCmd* cmd, bool& send_packet);
 }
 
 namespace resolver

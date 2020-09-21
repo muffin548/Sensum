@@ -53,7 +53,7 @@ void RequestHandler::Run(HTTPRequestCompleted_t* param)
 
 		const auto body_cstr = reinterpret_cast<std::uint8_t*>(const_cast<char*>(body.data()));
 
-		interfaces::steam_http->GetHTTPResponseBodyData(param->m_hRequest, body_cstr, param->m_unBodySize);
+		g::steam_http->GetHTTPResponseBodyData(param->m_hRequest, body_cstr, param->m_unBodySize);
 
 		body_cstr[param->m_unBodySize] = 0;
 
@@ -73,7 +73,7 @@ void RequestHandler::Run(HTTPRequestCompleted_t* param)
 		}
 	}
 
-	interfaces::steam_http->ReleaseHTTPRequest(param->m_hRequest);
+	g::steam_http->ReleaseHTTPRequest(param->m_hRequest);
 }
 
 static void register_callback(RequestHandler* callback, const SteamAPICall_t handle)
@@ -103,20 +103,20 @@ void http::post(const char* url, std::map<std::string, std::string> params, std:
 {
 	RequestHandler::SetCallback(callback);
 
-	const auto handle = interfaces::steam_http->CreateHTTPRequest(params.empty() ? EHTTPMethod::GET : EHTTPMethod::POST, url);
+	const auto handle = g::steam_http->CreateHTTPRequest(params.empty() ? EHTTPMethod::GET : EHTTPMethod::POST, url);
 
 	for (auto& header : headers)
 	{
-		interfaces::steam_http->SetHTTPRequestHeaderValue(handle, header.first.c_str(), header.second.c_str());
+		g::steam_http->SetHTTPRequestHeaderValue(handle, header.first.c_str(), header.second.c_str());
 	}
 
 	for (auto& param : params)
 	{
-		interfaces::steam_http->SetHTTPRequestGetOrPostParameter(handle, param.first.c_str(), param.second.c_str());
+		g::steam_http->SetHTTPRequestGetOrPostParameter(handle, param.first.c_str(), param.second.c_str());
 	}
 
 	SteamAPICall_t api_call;
-	interfaces::steam_http->SendHTTPRequest(handle, &api_call);
+	g::steam_http->SendHTTPRequest(handle, &api_call);
 
 	static RequestHandler s_request_handler;
 	register_callback(&s_request_handler, api_call);

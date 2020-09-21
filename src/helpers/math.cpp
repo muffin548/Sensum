@@ -1,7 +1,7 @@
 #include "math.h"
 #include "utils.h"
 #include "console.h"
-#include "../globals.h"
+#include "../settings/globals.h"
 #include "../valve_sdk/csgostructs.hpp"
 
 #include <d3dx9.h>
@@ -180,6 +180,24 @@ QAngle math::CalcAngle(Vector src, Vector dst)
 	return angles;
 }
 
+QAngle math::CalcAngle2(const Vector& src, const Vector& dst)
+{
+	QAngle vAngle;
+	Vector delta((src.x - dst.x), (src.y - dst.y), (src.z - dst.z));
+	double hyp = sqrt(delta.x * delta.x + delta.y * delta.y);
+
+	vAngle.pitch = float(atanf(float(delta.z / hyp)) * 57.295779513082f);
+	vAngle.yaw = float(atanf(float(delta.y / delta.x)) * 57.295779513082f);
+	vAngle.roll = 0.0f;
+
+	if (delta.x >= 0.0)
+	{
+		vAngle.yaw += 180.0f;
+	}
+
+	return vAngle;
+}
+
 void math::angle2vectors(const QAngle& angles, Vector& forward, Vector& right, Vector& up)
 {
 	float sr, sp, sy, cr, cp, cy;
@@ -307,7 +325,7 @@ bool math::world2screen(const Vector& in, Vector& out)
 		return false;
 
 	int w, h;
-	interfaces::engine_client->GetScreenSize(w, h);
+	g::engine_client->GetScreenSize(w, h);
 
 	out.x = (w / 2.0f) + (out.x * w) / 2.0f;
 	out.y = (h / 2.0f) - (out.y * h) / 2.0f;
@@ -337,7 +355,7 @@ static bool math::screen_transform2(const Vector& in, Vector& out) {
 }
 //--------------------------------------------------------------------------------
 bool math::WorldToScreen2(const Vector& in, Vector& out) {
-	if (math::screen_transform2(in, out)) {
+	if (screen_transform2(in, out)) {
 		int w, h;
 		g::engine_client->GetScreenSize(w, h);
 
@@ -544,7 +562,7 @@ void math::smooth(const float& amount, const QAngle& current_angles, const QAngl
 	angles.NormalizeClamp();
 
 	auto corrected_amount = amount;
-	auto tickrate = 1.0f / interfaces::global_vars->interval_per_tick;
+	auto tickrate = 1.0f / g::global_vars->interval_per_tick;
 	if (tickrate != 64.f)
 	{
 		//shooth 4

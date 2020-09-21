@@ -1,12 +1,12 @@
 #include "hooks.h"
-#include "../globals.h"
-#include "../options.hpp"
+#include "../settings/globals.h"
+#include "../settings/options.hpp"
 #include "../imgui/imgui.h"
 #include "../render/render.h"
 #include "../helpers/console.h"
 #include "../helpers/notifies.h"
 #include "../features/features.h"
-#include "..//Chams.h"
+#include "../features/Chams.h"
 
 #include <intrin.h>
 
@@ -28,7 +28,7 @@ namespace hooks
 		notifies::handle(globals::draw_list);
 		render::spectators::show();
 		grenade_prediction::render(globals::draw_list);
-		offscreen_entities::render(globals::draw_list);
+		esp::render_helpers(globals::draw_list);
 		esp::render(globals::draw_list);
 		visuals::render(globals::draw_list);
 
@@ -37,7 +37,7 @@ namespace hooks
 		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 	}
 
-	long __stdcall d3d9::end_scene::hooked(IDirect3DDevice9* device)
+	long __stdcall end_scene::hooked(IDirect3DDevice9* device)
 	{
 		static uintptr_t gameoverlay_return_address = 0;
 		if (!gameoverlay_return_address) {
@@ -52,7 +52,7 @@ namespace hooks
 		}
 
 		if (gameoverlay_return_address != (uintptr_t)(_ReturnAddress()) && settings::misc::anti_obs)
-			return hook.get_original<fn>(index)(device);
+			return original(device);
 
 		IDirect3DStateBlock9* pixel_state = NULL;
 		IDirect3DVertexDeclaration9* vertDec;
@@ -71,6 +71,6 @@ namespace hooks
 		device->SetVertexDeclaration(vertDec);
 		device->SetVertexShader(vertShader);
 
-		return hook.get_original<fn>(index)(device);
+		return original(device);
 	}
 }

@@ -1,6 +1,6 @@
 #include "render.h"
-#include "../options.hpp"
-#include "../globals.h"
+#include "../settings/options.hpp"
+#include "../settings/globals.h"
 
 namespace render
 {
@@ -8,10 +8,10 @@ namespace render
 	{
 		void show()
 		{
-			if (!render::fonts::spectators || !interfaces::local_player)
+			if (!render::fonts::spectators || !g::local_player)
 				return;
 
-			c_base_player* player = interfaces::local_player;
+			c_base_player* player = g::local_player;
 			if (player->m_hObserverTarget())
 				player = c_base_player::GetEntityFromHandle<c_base_player>(player->m_hObserverTarget());
 
@@ -22,10 +22,10 @@ namespace render
 			const auto screen_size = ImGui::GetIO().DisplaySize;
 			const auto color = ImGui::GetColorU32(player->IsFlashed() ? ImVec4::Black : ImVec4::White);
 
-			for (int i = 1; i < interfaces::engine_client->GetMaxClients(); ++i)
+			for (int i = 1; i < g::engine_client->GetMaxClients(); ++i)
 			{
 				auto entity = c_base_player::GetPlayerByIndex(i);
-				if (!entity || !entity->IsPlayer() || entity->is_dormant() || entity->IsAlive() || entity == player || entity == interfaces::local_player)
+				if (!entity || !entity->IsPlayer() || entity->is_dormant() || entity->IsAlive() || entity == player || entity == g::local_player)
 					continue;
 
 				const auto observer_target = c_base_player::GetEntityFromHandle(entity->m_hObserverTarget());

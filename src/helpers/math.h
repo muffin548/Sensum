@@ -21,6 +21,7 @@ namespace math
 	void angle2vectors(const QAngle& angles, Vector& forward);
 	void AngleVectors(const float& angles, Vector& forward);
 	QAngle CalcAngle(Vector src, Vector dst);
+	QAngle CalcAngle2(const Vector& src, const Vector& dst);
 	void angle2vectors(const QAngle& angles, Vector& forward, Vector& right, Vector& up);
 	Vector CrossProduct(const Vector& a, const Vector& b);
 	void vector2angles(const Vector& forward, QAngle& angles);

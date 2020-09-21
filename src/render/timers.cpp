@@ -1,13 +1,13 @@
 #include "render.h"
-#include "../globals.h"
-#include "../options.hpp"
+#include "../settings/globals.h"
+#include "../settings/options.hpp"
 #include "../helpers/imdraw.h"
 #include "../helpers/entities.h"
 #include "../features/features.h"
 #include "..//helpers/notifies.h"
 #include "render.h"
-#include "..//Sounds.h"
-#include "..//esp.hpp"
+#include "../features/Sounds.h"
+#include "../features/esp.hpp"
 
 namespace render
 {
@@ -22,7 +22,7 @@ namespace render
 		void render_panel()
 		{
 			if (!cl_hud_playercount_pos)
-				cl_hud_playercount_pos = interfaces::cvar->find("cl_hud_playercount_pos");
+				cl_hud_playercount_pos = g::cvar->find("cl_hud_playercount_pos");
 
 			if (!cl_hud_playercount_pos)
 				return;
@@ -58,7 +58,7 @@ namespace render
 			txt_size = ImGui::CalcTextSize(fps);
 			auto text_pos = ImVec2(start_pos.x + 240.f - 2.f - txt_size.x, !is_top ? end_pos.y - 2.f - txt_size.y : end_pos.y + 2.f);
 
-			const auto fps_color = interfaces::global_vars->interval_per_tick * 0.8f < interfaces::global_vars->absoluteframetime ? ImVec4(1.f, 0.37f, 0.15f, 1.f) : ImVec4(0.64f, 0.82f, 0.45f, 1.f);
+			const auto fps_color = g::global_vars->interval_per_tick * 0.8f < g::global_vars->absoluteframetime ? ImVec4(1.f, 0.37f, 0.15f, 1.f) : ImVec4(0.64f, 0.82f, 0.45f, 1.f);
 
 			//imdraw::outlined_text(fps, text_pos, ImGui::GetColorU32(fps_color));
 
@@ -117,31 +117,20 @@ namespace render
 
 				//
 
-				char hp[16];
+				char hp[256];
 				sprintf_s(hp, "%d", m_local.hp);
-
-				const auto TXTsize = ImGui::CalcTextSize("HP");
 
 				txt_size = ImGui::CalcTextSize(hp);
 
-				//const auto bomb_color = m_local.bomb_time > 0.f ? ImVec4(0.88f, 0.82f, 0.45f, 1.f) : ImVec4(1.f, 1.f, 1.f, 1.f);
+				if (m_local.isBombPlantedStatus)
+				{
+					if (g::local_player->IsAlive() && m_local.damage <= g::local_player->m_iHealth()) {
+						text_pos = ImVec2(start_pos.x + 240.f - 2.f - txt_size.x, !is_top ? end_pos.y - 2.f - txt_size.y : end_pos.y + 2.f);
+						imdraw::outlined_text(hp, text_pos, ImGui::GetColorU32(bomb_color));
 
-				if (g::local_player->IsAlive() && m_local.damage <= g::local_player->m_iHealth()) {
-					text_pos = ImVec2(start_pos.x + 240.f - 2.f - txt_size.x, !is_top ? end_pos.y - 2.f - txt_size.y : end_pos.y + 2.f);
-					imdraw::outlined_text(hp, text_pos, ImGui::GetColorU32(bomb_color));
-
-					text_pos = ImVec2(start_pos.x + 240.f + 2.f, !is_top ? end_pos.y - 2.f - txt_size.y : end_pos.y + 2.f);
-					imdraw::outlined_text("HP", text_pos, ImGui::GetColorU32(ImVec4::White));
-				}
-
-				//render fatal check
-				if (g::local_player->IsAlive() && m_local.damage >= g::local_player->m_iHealth()) {
-					auto txt_size2 = ImGui::CalcTextSize("0");
-					text_pos = ImVec2(start_pos.x + 240.f - 2.f - txt_size2.x, !is_top ? end_pos.y - 2.f - txt_size2.y : end_pos.y + 2.f);
-					imdraw::outlined_text("0", text_pos, ImGui::GetColorU32(ImVec4::Red));
-
-					text_pos = ImVec2(start_pos.x + 240.f + 2.f, !is_top ? end_pos.y - 2.f - txt_size2.y : end_pos.y + 2.f);
-					imdraw::outlined_text("HP", text_pos, ImGui::GetColorU32(ImVec4::White));
+						text_pos = ImVec2(start_pos.x + 240.f + 2.f, !is_top ? end_pos.y - 2.f - txt_size.y : end_pos.y + 2.f);
+						imdraw::outlined_text("HP", text_pos, ImGui::GetColorU32(ImVec4::White));
+					}
 				}
 			}
 
@@ -170,11 +159,11 @@ namespace render
 			std::vector<player_info_t> pinfo;
 			std::vector<grief_box_info_t> ginfo;
 
-			auto player_resource = *interfaces::player_resource;
+			auto player_resource = *g::player_resource;
 			if (!player_resource)
 				return;
 
-			for (int i = 1; i < interfaces::engine_client->GetMaxClients(); ++i)
+			for (int i = 1; i < g::engine_client->GetMaxClients(); ++i)
 			{
 				c_base_player* player = c_base_player::GetPlayerByIndex(i);
 
@@ -222,32 +211,32 @@ namespace render
 					columns(6);
 					{
 						ImGui::SetColumnWidth(-1, 40.f);
-						ImGui::Text(___("Name", u8"Имя"));
+						ImGui::Text("Name");
 
 						ImGui::NextColumn();
 
 						ImGui::SetColumnWidth(-1, 40.f);
-						ImGui::Text(___("Money", u8"Деньги"));
+						ImGui::Text("Money");
 
 						ImGui::NextColumn();
 
 						ImGui::SetColumnWidth(-1, 25.f); //48
-						ImGui::Text(___(" HP", u8"Дамаг"));
+						ImGui::Text(" HP");
 
 						ImGui::NextColumn();
 
 						ImGui::SetColumnWidth(-1, 30.f); //45
-						ImGui::Text(___("Level", u8"Дамаг"));
+						ImGui::Text("Level");
 
 						ImGui::NextColumn();
 
 						ImGui::SetColumnWidth(-1, 30.f);
-						ImGui::Text(___("Wins", u8"Дамаг"));
+						ImGui::Text("Wins");
 
 						ImGui::NextColumn();
 
 						ImGui::SetColumnWidth(-1, 30.f);
-						ImGui::Text(___("Dist", u8"Дамаг"));
+						ImGui::Text("Dist");
 					}
 					columns(1);
 
@@ -255,7 +244,7 @@ namespace render
 					{
 						ImVec4 color;
 
-						for (int i = 1; i < interfaces::engine_client->GetMaxClients(); ++i)
+						for (int i = 1; i < g::engine_client->GetMaxClients(); ++i)
 						{
 							c_base_player* player = c_base_player::GetPlayerByIndex(i);
 
@@ -328,17 +317,17 @@ namespace render
 					columns(3);
 					{
 						ImGui::SetColumnWidth(-1, 40.f);
-						ImGui::Text(___("Name", u8"Имя"));
+						ImGui::Text("Name");
 
 						ImGui::NextColumn();
 
 						ImGui::SetColumnWidth(-1, 48.f);
-						ImGui::Text(___("Damage", u8"Дамаг"));
+						ImGui::Text("Damage");
 
 						ImGui::NextColumn();
 
 						ImGui::SetColumnWidth(-1, 45.f);
-						ImGui::Text(___("Kills", u8"Дамаг"));
+						ImGui::Text("Kills");
 					}
 					columns(1);
 
@@ -346,7 +335,7 @@ namespace render
 					{
 						ImVec4 color;
 
-						for (int i = 1; i < interfaces::engine_client->GetMaxClients(); ++i)
+						for (int i = 1; i < g::engine_client->GetMaxClients(); ++i)
 						{
 							c_base_player* player = c_base_player::GetPlayerByIndex(i);
 
@@ -401,9 +390,9 @@ namespace render
 
 		void show()
 		{
-			m_Framerate = 0.9 * m_Framerate + (1.0 - 0.9) * interfaces::global_vars->absoluteframetime;
+			m_Framerate = 0.9 * m_Framerate + (1.0 - 0.9) * g::global_vars->absoluteframetime;
 
-			if (!interfaces::local_player || !render::fonts::low_size)
+			if (!g::local_player || !render::fonts::low_size)
 				return;
 
 			if (entities::local_mutex.try_lock())
