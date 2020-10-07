@@ -197,6 +197,7 @@ namespace settings
 
 		extern int style_enemy;
 		extern int style_teammate;
+		extern int glow_list_mode;
 
 		extern Color glowEnemyColor;
 		extern Color glowTeamColor;
@@ -210,62 +211,77 @@ namespace settings
 		extern Color glowSmoke;
 		extern Color glowDroppedC4Color;
 	}
-
+	
 	namespace chams
 	{
-		extern bool enabled;
-		extern bool visible_only;
-		extern bool wireframe;
-		extern bool flat;
-		extern bool desync;
-		extern bool localnew;
-		extern bool teamnew;
-		extern bool enemynew;
-		extern bool btchams;
-		extern bool xqz;
-		extern int bttype;
-		extern bool btflat;
-		extern bool nade_chams;
-		extern bool wep_droppedchams;
-		extern bool plantedc4_chams;
-		extern int localmodenew;
-		extern int teammodenew;
-		extern int enemymodenew;
-		extern int desyncChamsMode;
-		extern bool health_chams;
+		extern int chams_list_mode;
 
-		extern Color btColorChams;
-		extern Color ColorWeaponDroppedChams;
-		extern Color colorNadeChams;
-		extern Color colorPlantedC4Chams;
-		extern Color visible_color;
-		extern Color occluded_color;
-		extern Color LocalColor_vis;
-		extern Color TeamColor_vis;
-		extern Color EnemyColor_vis;
-		extern Color LocalColor_XQZ;
-		extern Color TeamColor_XQZ;
-		extern Color EnemyColor_XQZ;
-		extern Color ChamsPlantedC4XQZ;
-		extern Color ChamsHEXQZ;
-		extern Color ChamsMolotovIncendiaryXQZ;
-		extern Color ChamsFlashbangXQZ;
-		extern Color ChamsDecoyXQZ;
-		extern Color ChamsSmokeXQZ;
-		extern Color ChamsC4Dropped;
-		extern Color desync_color;
-
-		extern int matmode;
-
-		namespace arms
+		namespace enemy
 		{
 			extern bool enabled;
+			extern bool visible_only;
+			extern bool flat;
 			extern bool wireframe;
+			extern bool health_chams;
 
-			extern ImVec4 color;
+			extern int selected_material;
+
+			extern Color color_visible;
+			extern Color color_not_visible;
+		}
+
+		namespace teammates
+		{
+			extern bool enabled;
+			extern bool visible_only;
+			extern bool flat;
+			extern bool wireframe;
+			extern bool health_chams;
+
+			extern int selected_material;
+
+			extern Color color_visible;
+			extern Color color_not_visible;
+		}
+
+		namespace localplayer
+		{
+			extern bool enabled;
+			extern bool flat;
+			extern bool wireframe;
+			extern bool desync_chams;
+
+			extern int desync_chams_mode;
+			extern int selected_material;
+
+			extern Color color;
+			extern Color desync_color;
+		}
+
+		namespace misc
+		{
+			extern bool weapon_chams;
+			extern bool dropped_weapons;
+			extern bool nade_chams;
+			extern bool dropped_bomb_chams;
+			extern bool planted_bomb_chams;
+			extern bool accesories_chams;
+			extern bool arms_chams;
+
+			extern Color color_weapon_chams;
+			extern Color color_dropped_weapons_chams;
+			extern Color color_nade_chams;
+			extern Color color_dropped_bomb_chams;
+			extern Color color_planted_bomb_chams;
+
+			extern Color color_he_chams;
+			extern Color color_inc_molotov_chams;
+			extern Color color_flashbang_chams;
+			extern Color color_decoy_chams;
+			extern Color color_smoke_chams;
 		}
 	}
-
+	
 	namespace visuals
 	{
 		extern bool grenade_prediction;

@@ -48,6 +48,7 @@
 #include "interfaces/CGlowObjectManager.h"
 #include "interfaces/IStudioRender.h"
 #include "interfaces/IEngineSound.hpp"
+#include "interfaces/IMaterialVar.h"
 
 #include "misc/Convar.hpp"
 #include "interfaces/ICvar.h"

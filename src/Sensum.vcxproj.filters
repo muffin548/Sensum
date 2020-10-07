@@ -301,6 +301,9 @@
     <ClCompile Include="features\popflash_helper.cpp">
       <Filter>features\misc</Filter>
     </ClCompile>
+    <ClCompile Include="features\offscreen.cpp">
+      <Filter>features\visuals</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\directx9\imgui_impl_dx9.h">
@@ -633,7 +636,10 @@
     <ClInclude Include="valve_sdk\interfaces\IEngineSound.hpp">
       <Filter>valve_sdk\interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="popflash_helper.h">
+    <ClInclude Include="valve_sdk\interfaces\IMaterialVar.h">
+      <Filter>valve_sdk\interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="features\popflash_helper.h">
       <Filter>features\misc</Filter>
     </ClInclude>
   </ItemGroup>

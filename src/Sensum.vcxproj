@@ -131,6 +131,7 @@
     <ClCompile Include="features\nade_helper.cpp" />
     <ClCompile Include="features\no_flash.cpp" />
     <ClCompile Include="features\no_smoke.cpp" />
+    <ClCompile Include="features\offscreen.cpp" />
     <ClCompile Include="features\popflash_helper.cpp" />
     <ClCompile Include="features\resolver.cpp" />
     <ClCompile Include="features\slow_walk.cpp" />
@@ -202,6 +203,7 @@
     <ClInclude Include="features\Chams.h" />
     <ClInclude Include="features\esp.hpp" />
     <ClInclude Include="features\nade_helper.h" />
+    <ClInclude Include="features\popflash_helper.h" />
     <ClInclude Include="features\soundesp.h" />
     <ClInclude Include="features\Sounds.h" />
     <ClInclude Include="helpers\autowall.h" />
@@ -232,7 +234,6 @@
     <ClInclude Include="minhook\hde\table64.h" />
     <ClInclude Include="minhook\minhook.h" />
     <ClInclude Include="minhook\trampoline.h" />
-    <ClInclude Include="popflash_helper.h" />
     <ClInclude Include="render\fonts\undefeated.hpp" />
     <ClInclude Include="render\render.h" />
     <ClInclude Include="security\importer.h" />
@@ -258,6 +259,7 @@
     <ClInclude Include="valve_sdk\interfaces\IFileSystem.h" />
     <ClInclude Include="valve_sdk\interfaces\ILocalize.h" />
     <ClInclude Include="valve_sdk\interfaces\IMaterial.h" />
+    <ClInclude Include="valve_sdk\interfaces\IMaterialVar.h" />
     <ClInclude Include="valve_sdk\interfaces\IMemAlloc.h" />
     <ClInclude Include="valve_sdk\interfaces\IRefCounted.h" />
     <ClInclude Include="valve_sdk\interfaces\IStudioRender.h" />

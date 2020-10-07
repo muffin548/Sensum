@@ -14,24 +14,23 @@ namespace render
 		void colors_tab()
 		{
 			separator("Chams");
-			ColorEdit4("Enemy Visible", &settings::chams::EnemyColor_vis, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Enemy Visible", &settings::chams::enemy::color_visible, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 			ImGui::SameLine();
-			ColorEdit4("Enemy XQZ", &settings::chams::EnemyColor_XQZ, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Enemy XQZ", &settings::chams::enemy::color_not_visible, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 
-			ColorEdit4("Team Visible  ", &settings::chams::TeamColor_vis, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Team Visible  ", &settings::chams::teammates::color_visible, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 			ImGui::SameLine();
-			ColorEdit4("Team XQZ", &settings::chams::TeamColor_XQZ, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Team XQZ", &settings::chams::teammates::color_not_visible, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 
-			ColorEdit4("Local Visible   ", &settings::chams::LocalColor_vis, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Local  ", &settings::chams::localplayer::color, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 			ImGui::SameLine();
-			ColorEdit4("Local XQZ", &settings::chams::LocalColor_XQZ, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
-			ColorEdit4("Planted C4     ##chams", &settings::chams::colorPlantedC4Chams, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Planted C4     ##chams", &settings::chams::misc::color_planted_bomb_chams, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 			ImGui::SameLine();
-			ColorEdit4("Weapons (?)##chams", &settings::chams::ColorWeaponDroppedChams, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Weapons (?)##chams", &settings::chams::misc::color_dropped_weapons_chams, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 			tooltip("Dropped Weapons");
-			ColorEdit4("Grenades      ##chams", &settings::chams::colorNadeChams, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Grenades      ##chams", &settings::chams::misc::color_nade_chams, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 			ImGui::SameLine();
-			ColorEdit4("Real Angle##chams", &settings::chams::desync_color, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
+			ColorEdit4("Real Angle##chams", &settings::chams::localplayer::desync_color, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);
 
 			separator("ESP");
 			ColorEdit4("ESP Visible ", &settings::esp::visibleColor, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_PickerHueBar);

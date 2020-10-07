@@ -303,7 +303,7 @@ namespace render
 
 						ImGui::SliderFloatLeftAligned("Smooth:", &settings->smooth, 1, 15.f, "%.1f %");
 
-						ImGui::SliderIntLeftAligned("Lag Compensation:", &settings->backtrack.ticks, 0, 12, "%.0f ms");
+						ImGui::SliderIntLeftAligned("Backtrack:", &settings->backtrack.ticks, 0, 12, settings->backtrack.ticks == 1 ? "%1.f tick" : "%1.f ticks");
 
 						ImGui::SliderIntLeftAligned("Hit Chance:", &settings->min_hitchanse, 0, 100, "%.0f%%");
 					}
@@ -334,8 +334,8 @@ namespace render
 					checkbox("First Bullet", &settings->recoil.first_bullet);
 					checkbox("Random Yaw & Pitch Amount (?)", &settings->recoil.humanize);
 					tooltip("Will randomize yaw and pitch.");
-					checkbox("RCS Hitbox Override (?)", &settings->rcs_override_hitbox);
-					tooltip("If shotsFired >= 3 - disable all hitboxes, except body, if shotsFired < 3 - enable hitboxes you had.");
+					//checkbox("RCS Hitbox Override (?)", &settings->rcs_override_hitbox); //Doesnt work very well, need to recode the whole aimbot.
+					//tooltip("If shotsFired >= 3 - disable all hitboxes, except body, if shotsFired < 3 - enable hitboxes you had.");
 
 					ImGui::SliderFloatLeftAligned("Pitch:", &settings->recoil.pitch, 0, 2, "%.1f %");
 					ImGui::SliderFloatLeftAligned("Yaw:", &settings->recoil.yaw, 0, 2, "%.1f %");

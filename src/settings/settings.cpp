@@ -68,6 +68,7 @@ namespace settings
 
 		int style_enemy = 0;
 		int style_teammate = 0;
+		int glow_list_mode = 0;
 
 		Color glowEnemyColor = Color(255, 0, 0, 255);
 		Color glowTeamColor(0, 255, 0, 255);
@@ -84,59 +85,71 @@ namespace settings
 
 	namespace chams
 	{
-		bool enabled = false;
-		bool visible_only = true;
-		bool wireframe = false;
-		bool flat = false;
-		bool desync = false;
-		bool localnew = false;
-		bool teamnew = false;
-		bool enemynew = false;
-		bool btchams = false;
-		bool btflat = false;
-		bool xqz = false;
-		int bttype = 0;
-		bool wepchams = false;
-		bool wep_droppedchams = false;
-		bool wep_droppedchams_xqz = false;
-		bool nade_chams = false;
-		bool nade_chams_xqz = false;
-		bool plantedc4_chams = false;
-		bool plantedc4_chams_xqz = false;
-		int matmode;
-		int localmodenew = 0;
-		int enemymodenew = 0;
-		int teammodenew = 0;
-		int desyncChamsMode = 0;
-		bool health_chams = false;
+		int chams_list_mode = 0;
 
-		Color btColorChams = Color(0, 255, 248, 147);
-		Color ColorWeaponDroppedChams = Color(0, 255, 125, 255);
-		Color colorNadeChams = Color(0, 255, 125, 255);
-		Color colorPlantedC4Chams = Color(0, 255, 125, 255);
-		Color visible_color = Color(0, 200, 80);
-		Color occluded_color = Color(0, 0, 0);
-		Color LocalColor_vis = Color(0, 200, 80);
-		Color TeamColor_vis = Color(0, 200, 80);
-		Color EnemyColor_vis = Color(0, 200, 0);
-		Color LocalColor_XQZ = Color(0, 200, 0);
-		Color TeamColor_XQZ = Color(0, 200, 0);
-		Color EnemyColor_XQZ = Color(0, 200, 0);
-		Color ChamsPlantedC4XQZ = Color(0, 255, 0, 255);
-		Color ChamsHEXQZ = Color(255, 0, 0, 255);
-		Color ChamsMolotovIncendiaryXQZ = Color(255, 128, 0, 255);
-		Color ChamsFlashbangXQZ = Color(255, 255, 0);
-		Color ChamsDecoyXQZ = Color(0, 255, 0, 255);
-		Color ChamsSmokeXQZ = Color(105, 105, 105, 255);
-		Color ChamsC4Dropped = Color(0, 255, 255, 255);
-		Color desync_color = Color(255, 255, 255, 255);
-
-		namespace arms
+		namespace enemy
 		{
 			bool enabled = false;
-			bool wireframe = true;
+			bool visible_only = false;
+			bool flat = false;
+			bool wireframe = false;
+			bool health_chams = false;
 
-			ImVec4 color = ImVec4::Red;
+			int selected_material = 1;
+
+			Color color_visible = Color(0, 128, 0, 255);
+			Color color_not_visible = Color(255, 0, 0, 255);
+		}
+
+		namespace teammates
+		{
+			bool enabled = false;
+			bool visible_only = false;
+			bool flat = false;
+			bool wireframe = false;
+			bool health_chams = false;
+
+			int selected_material = 1;
+
+			Color color_visible = Color(0, 128, 0, 255);
+			Color color_not_visible = Color(255, 0, 0, 255);
+		}
+
+		namespace localplayer
+		{
+			bool enabled = false;
+			bool wireframe = false;
+			bool flat = false;
+			bool desync_chams = false;
+
+			int desync_chams_mode = 0;
+			int selected_material = 1;
+
+			Color color = Color(0, 0, 255, 255);
+			Color desync_color = Color(255, 255, 255, 255);
+		}
+
+		namespace misc
+		{
+			bool weapon_chams = false;
+			bool dropped_weapons = false;
+			bool nade_chams = false;
+			bool dropped_bomb_chams = false;
+			bool planted_bomb_chams = false;
+			bool accesories_chams = false;
+			bool arms_chams = false;
+
+			Color color_weapon_chams = Color(0, 255, 125, 255);
+			Color color_dropped_weapons_chams = Color(0, 255, 125, 255);
+			Color color_nade_chams = Color(0, 255, 125, 255);
+			Color color_dropped_bomb_chams = Color(0, 255, 125, 255);
+			Color color_planted_bomb_chams = Color(0, 255, 125, 255);
+
+			Color color_he_chams = Color(255, 0, 0, 255);
+			Color color_inc_molotov_chams = Color(255, 128, 0, 255);
+			Color color_flashbang_chams = Color(255, 255, 0);
+			Color color_decoy_chams = Color(0, 255, 0, 255);
+			Color color_smoke_chams = Color(105, 105, 105, 255);
 		}
 	}
 
@@ -269,48 +282,45 @@ namespace settings
 
 				imdraw::apply_style(visuals::night_mode);
 
-				Option::Load(root["chams.visible_only"], chams::visible_only, true);
-				Option::Load(root["chams.flat"], chams::flat, false);
-				Option::Load(root["chams.wireframe"], chams::wireframe, false);
-				Option::Load(root["chams.enemy"], chams::enemynew);
-				Option::Load(root["chams.team"], chams::teamnew);
-				Option::Load(root["chams.local"], chams::localnew);
-				Option::Load(root["chams.enemy_mode"], chams::enemymodenew);
-				Option::Load(root["chams.team_mode"], chams::teammodenew);
-				Option::Load(root["chams.local_mode"], chams::localmodenew);
-				Option::Load(root["chams.health"], chams::health_chams);
-				Option::Load(root["chams.enemy_color_vis"], chams::EnemyColor_vis, Color::Black);
-				Option::Load(root["chams.team_color_vis"], chams::TeamColor_vis, Color::Black);
-				Option::Load(root["chams.local_color_vis"], chams::LocalColor_vis, Color::Black);
-				Option::Load(root["chams.enemy_color_xqz"], chams::EnemyColor_XQZ, Color(0, 200, 80));
-				Option::Load(root["chams.team_color_xqz"], chams::TeamColor_XQZ, Color(0, 200, 80));
-				Option::Load(root["chams.local_color_xqz"], chams::LocalColor_XQZ, Color(0, 200, 80));
-				Option::Load(root["chams.legit_aa"], chams::desync);
-				Option::Load(root["chams.backtrack"], chams::bttype);
-				Option::Load(root["chams.backtrack_flat"], chams::btflat);
-				Option::Load(root["chams.backtrack_color"], chams::btColorChams);
-				Option::Load(root["chams.viewmodel_weapons"], chams::wepchams);
-				Option::Load(root["chams.dropped_weapons"], chams::wep_droppedchams);
-				Option::Load(root["chams.dropped_weapons_color"], chams::ColorWeaponDroppedChams);
-				Option::Load(root["chams.plantedc4"], chams::plantedc4_chams);
-				Option::Load(root["chams.plantedc4_color"], chams::colorPlantedC4Chams);
-				Option::Load(root["chams.nades"], chams::nade_chams);
-				Option::Load(root["chams.nades_color"], chams::colorNadeChams);
-				Option::Load(root["chams.arms.enabled"], chams::arms::enabled, false);
-				Option::Load(root["chams.arms.wireframe"], chams::arms::wireframe, true);
-				Option::Load(root["chams.arms.color"], chams::arms::color, ImVec4::Red);
-				Option::Load(root["chams.visible_color"], chams::visible_color, Color(0, 200, 80));
-				Option::Load(root["chams.occluded_color"], chams::occluded_color, Color::Black);
-				Option::Load(root["chams.plantedc4_color"], settings::chams::ChamsPlantedC4XQZ);
-				Option::Load(root["chams.he_color"], settings::chams::ChamsHEXQZ);
-				Option::Load(root["chams.molotov_inc_color"], settings::chams::ChamsMolotovIncendiaryXQZ);
-				Option::Load(root["chams.flashbang_color"], settings::chams::ChamsFlashbangXQZ);
-				Option::Load(root["chams.decoy_color"], settings::chams::ChamsDecoyXQZ);
-				Option::Load(root["chams.smoke_color"], settings::chams::ChamsSmokeXQZ);
-				Option::Load(root["chams.C4dropped_color"], settings::chams::ChamsC4Dropped);
-				Option::Load(root["chams.legitaa_material_mode"], chams::desyncChamsMode);
-				Option::Load(root["chams.legitaa_color"], chams::desync_color);
+				Option::Load(root["chams.list_mode"], chams::chams_list_mode, 0);
+				Option::Load(root["chams.enemy_enabled"], chams::enemy::enabled, false);
+				Option::Load(root["chams.enemy_visible_only"], chams::enemy::visible_only, true);
 
+				Option::Load(root["chams.teammates_enabled"], chams::teammates::enabled, false);
+				Option::Load(root["chams.teammates_visible_only"], chams::teammates::visible_only, true);
+
+				Option::Load(root["chams.localplayer_enabled"], chams::localplayer::enabled, false);
+
+				//Option::Load(root["chams.flat"], chams::flat, false);
+				//Option::Load(root["chams.wireframe"], chams::wireframe, false);
+				//Option::Load(root["chams.health"], chams::health_chams);
+				Option::Load(root["chams.enemy_color_vis"], chams::enemy::color_visible);
+				Option::Load(root["chams.team_color_vis"], chams::teammates::color_visible);
+				Option::Load(root["chams.local_color_vis"], chams::localplayer::color);
+				Option::Load(root["chams.enemy_color_xqz"], chams::enemy::color_not_visible);
+				Option::Load(root["chams.team_color_xqz"], chams::teammates::color_not_visible);
+
+				Option::Load(root["chams.legit_aa"], chams::localplayer::desync_chams);
+				Option::Load(root["chams.legitaa_material_mode"], chams::localplayer::desync_chams_mode);
+				Option::Load(root["chams.legitaa_color"], chams::localplayer::desync_color);
+				
+				Option::Load(root["chams.dropped_weapons"], chams::misc::dropped_weapons);
+				Option::Load(root["chams.dropped_weapons_color"], chams::misc::color_dropped_weapons_chams);
+				Option::Load(root["chams.plantedc4"], chams::misc::planted_bomb_chams);
+				Option::Load(root["chams.plantedc4_color"], chams::misc::color_planted_bomb_chams);
+				Option::Load(root["chams.nades"], chams::misc::nade_chams);
+				Option::Load(root["chams.nades_color"], chams::misc::color_nade_chams);
+				Option::Load(root["chams.accesories_chams"], chams::misc::accesories_chams);
+				Option::Load(root["chams.arms_chams"], chams::misc::arms_chams);
+				
+				
+				Option::Load(root["chams.he_color"], settings::chams::misc::color_he_chams);
+				Option::Load(root["chams.molotov_inc_color"], settings::chams::misc::color_inc_molotov_chams);
+				Option::Load(root["chams.flashbang_color"], settings::chams::misc::color_flashbang_chams);
+				Option::Load(root["chams.decoy_color"], settings::chams::misc::color_decoy_chams);
+				Option::Load(root["chams.smoke_color"], settings::chams::misc::color_smoke_chams);
+				Option::Load(root["chams.C4dropped_color"], settings::chams::misc::color_dropped_bomb_chams);
+				
 				Option::Load(root["misc.bhop"], misc::bhop);
 				Option::Load(root["misc.auto_strafe"], misc::auto_strafe);
 				Option::Load(root["misc.viewmodel_fov"], misc::viewmodel_fov, 68);
@@ -364,6 +374,7 @@ namespace settings
 				Option::Load(root["glow.nades"], glow::glowNadesEnabled);
 				Option::Load(root["glow.dropped_weapons"], glow::glowDroppedWeaponsEnabled);
 				Option::Load(root["glow.override"], glow::glowOverride);
+				Option::Load(root["glow.list_mode"], glow::glow_list_mode);
 
 				Option::Load(root["glow.enemy_color"], glow::glowEnemyColor);
 				Option::Load(root["glow.team_color"], glow::glowTeamColor);
@@ -516,48 +527,47 @@ namespace settings
 				config["visuals.dropped_weapons"] = visuals::dropped_weapons;
 				config["visuals.night_mode"] = visuals::night_mode;
 
+				config["chams.list_mode"] = chams::chams_list_mode;
+				config["chams.enemy_enabled"] = chams::enemy::enabled;
+				config["chams.enemy_visible_only"] = chams::enemy::visible_only;
 
-				config["chams.visible_only"] = chams::visible_only;
-				config["chams.flat"] = chams::flat;
-				config["chams.wireframe"] = chams::wireframe;
-				config["chams.enemy_mode"] = chams::enemymodenew;
-				config["chams.team_mode"] = chams::teammodenew;
-				config["chams.local_mode"] = chams::localmodenew;
-				config["chams.enemy"] = chams::enemynew;
-				config["chams.team"] = chams::teamnew;
-				config["chams.local"] = chams::localnew;
-				config["chams.legit_aa"] = chams::desync;
-				config["chams.backtrack"] = chams::bttype;
-				config["chams.backtrack_flat"] = chams::btflat;
-				config["chams.dropped_weapons"] = chams::wep_droppedchams;
-				config["chams.plantedc4"] = chams::plantedc4_chams;
-				config["chams.nades"] = chams::nade_chams;
-				config["chams.arms.enabled"] = chams::arms::enabled;
-				config["chams.arms.wireframe"] = chams::arms::wireframe;
-				config["chams.legitaa_material_mode"] = chams::desyncChamsMode;
-				config["chams.health"] = chams::health_chams;
+				config["chams.teammates_enabled"] = chams::teammates::enabled;
+				config["chams.teammates_visible_only"] = chams::teammates::visible_only;
 
-				Option::Save(config["chams.backtrack_color"], chams::btColorChams);
-				Option::Save(config["chams.enemy_color_vis"], chams::EnemyColor_vis);
-				Option::Save(config["chams.team_color_vis"], chams::TeamColor_vis);
-				Option::Save(config["chams.local_color_vis"], chams::LocalColor_vis);
-				Option::Save(config["chams.enemy_color_xqz"], chams::EnemyColor_XQZ);
-				Option::Save(config["chams.team_color_xqz"], chams::TeamColor_XQZ);
-				Option::Save(config["chams.local_color_xqz"], chams::LocalColor_XQZ);
-				Option::Save(config["chams.dropped_weapons_color"], chams::ColorWeaponDroppedChams);
-				Option::Save(config["chams.plantedc4_color"], chams::colorPlantedC4Chams);
-				Option::Save(config["chams.nades_color"], chams::colorNadeChams);
-				Option::Save(config["chams.visible_color"], chams::visible_color);
-				Option::Save(config["chams.occluded_color"], chams::occluded_color);
-				Option::Save(config["chams.arms.color"], chams::arms::color);
-				Option::Save(config["chams.plantedc4_color"], settings::chams::ChamsPlantedC4XQZ);
-				Option::Save(config["chams.he_color"], settings::chams::ChamsHEXQZ);
-				Option::Save(config["chams.molotov_inc_color"], settings::chams::ChamsMolotovIncendiaryXQZ);
-				Option::Save(config["chams.flashbang_color"], settings::chams::ChamsFlashbangXQZ);
-				Option::Save(config["chams.decoy_color"], settings::chams::ChamsDecoyXQZ);
-				Option::Save(config["chams.smoke_color"], settings::chams::ChamsSmokeXQZ);
-				Option::Save(config["chams.C4dropped_color"], settings::chams::ChamsC4Dropped);
-				Option::Save(config["chams.legitaa_color"], settings::chams::desync_color);
+				config["chams.localplayer_enabled"] = chams::localplayer::enabled;
+
+				//config["chams.flat"] = chams::flat;
+				//config["chams.wireframe"] = chams::wireframe;
+				//config["chams.health"] = chams::health_chams;
+				
+
+				config["chams.legit_aa"] = chams::localplayer::desync_chams;
+				config["chams.legitaa_material_mode"] = chams::localplayer::desync_chams_mode;
+				
+				config["chams.dropped_weapons"] = chams::misc::dropped_weapons;
+				config["chams.plantedc4"] = chams::misc::planted_bomb_chams;
+				config["chams.nades"] = chams::misc::nade_chams;
+				config["chams.accesories_chams"] = chams::misc::accesories_chams;
+				config["chams.arms_chams"] = chams::misc::arms_chams;
+				
+				
+				Option::Save(config["chams.enemy_color_vis"], chams::enemy::color_visible);
+				Option::Save(config["chams.team_color_vis"], chams::teammates::color_visible);
+				Option::Save(config["chams.local_color_vis"], chams::localplayer::color);
+				Option::Save(config["chams.enemy_color_xqz"], chams::enemy::color_not_visible);
+				Option::Save(config["chams.team_color_xqz"], chams::teammates::color_not_visible);
+
+				Option::Save(config["chams.dropped_weapons_color"], chams::misc::color_dropped_weapons_chams);
+				Option::Save(config["chams.plantedc4_color"], chams::misc::color_planted_bomb_chams);
+				Option::Save(config["chams.nades_color"], chams::misc::color_nade_chams);
+				
+				Option::Save(config["chams.he_color"], settings::chams::misc::color_he_chams);
+				Option::Save(config["chams.molotov_inc_color"], settings::chams::misc::color_inc_molotov_chams);
+				Option::Save(config["chams.flashbang_color"], settings::chams::misc::color_flashbang_chams);
+				Option::Save(config["chams.decoy_color"], settings::chams::misc::color_decoy_chams);
+				Option::Save(config["chams.smoke_color"], settings::chams::misc::color_smoke_chams);
+				Option::Save(config["chams.C4dropped_color"], settings::chams::misc::color_dropped_bomb_chams);
+				Option::Save(config["chams.legitaa_color"], settings::chams::localplayer::desync_color);
 
 				config["misc.bhop"] = misc::bhop;
 				config["misc.auto_strafe"] = misc::auto_strafe;
@@ -613,6 +623,7 @@ namespace settings
 				config["glow.plantedc4"] = glow::glowC4PlantedEnabled;
 				config["glow.nades"] = glow::glowNadesEnabled;
 				config["glow.override"] = glow::glowOverride;
+				config["glow.list_mode"] = glow::glow_list_mode;
 
 				Option::Save(config["glow.enemy_color"], glow::glowEnemyColor);
 				Option::Save(config["glow.team_color"], glow::glowTeamColor);

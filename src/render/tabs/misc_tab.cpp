@@ -84,6 +84,14 @@ namespace render
 						"Balance"
 					};
 
+					static const char* skyList[] = {
+						"Off", "Baggage", "Tibet", "Embassy", "Italy",
+						"Daylight 1", "Daylight 2", "Daylight 3", "Daylight 4",
+						"Cloudy", "Night 1", "Night 2", "Night Flat", "Day HD",
+						"Day", "Rural", "Vertigo HD", "Vertigo Blue HD", "Vertigo", 
+						"Vietnam", "Dusty Sky", "Jungle", "Nuke", "Office"
+					};
+
 					separator("Desync");
 					ImGui::PushID("desync");
 					{
@@ -105,16 +113,11 @@ namespace render
 					ImGui::SliderFloatLeftAligned("View Model:", &settings::misc::viewmodel_fov, 54, 120, "%.0f *");
 					ImGui::SliderIntLeftAligned("Debug:", &settings::misc::debug_fov, 80, 120, "%.0f *");
 
-					static const char* skyList[] = { "Off", "Baggage", "Tibet", "Embassy", "Italy", "Daylight 1", "Daylight 2", "Daylight 3", "Daylight 4", "Cloudy", "Night 1", "Night 2", "Night Flat", "Day HD", "Day", "Rural", "Vertigo HD", "Vertigo", "Dusty Sky", "Jungle", "Nuke", "Office" };
-
 					separator("Skybox Changer");
 
 					columns(2);
 					{
-						checkbox("Enabled", &settings::visuals::skychanger);
-
-						ImGui::NextColumn();
-						ImGui::Combo("List", &settings::visuals::skychanger_mode, skyList, IM_ARRAYSIZE(skyList));
+						ImGui::Combo("", &settings::visuals::skychanger_mode, skyList, IM_ARRAYSIZE(skyList));
 					}
 					columns(1);
 

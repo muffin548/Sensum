@@ -9,19 +9,16 @@ namespace color_modulation
 	auto view_model_fov = -1.f;
 	auto debug_model_fov = -1;
 
-	auto arms_state = false;
 	auto post_processing = false;
 	auto night_mode_state = false;
 	auto night_mode_first = false;
-	auto arms_wireframe_state = true;
 
 	auto flViewmodel_offset_x = -1.f;
 	auto flViewmodel_offset_y = -1.f;
 	auto flViewmodel_offset_z = -1.f;
 
 	ImVec4 last_sky;
-	ImVec4 arms_color;
-
+	
 	ConVar* viewmodel_fov = nullptr;
 	ConVar* debug_fov = nullptr;
 	ConVar* r_3dsky = nullptr;
@@ -36,6 +33,8 @@ namespace color_modulation
 	const uint32_t world_textures = FNV("World textures");
 	const uint32_t static_prop_textures = FNV("StaticProp textures");
 	const uint32_t particle_textures = FNV("Particle textures");
+
+	static const char* sv_skyname_backup;
 
 	uint8_t* sky_fn_offset = nullptr;
 
@@ -82,15 +81,6 @@ namespace color_modulation
 		if (night_mode_state != settings::visuals::night_mode)
 			return true;
 
-		if (arms_state != settings::chams::arms::enabled)
-			return true;
-
-		if (arms_wireframe_state != settings::chams::arms::wireframe)
-			return true;
-
-		if (arms_color != settings::chams::arms::color)
-			return true;
-
 		if (post_processing != globals::post_processing)
 			return true;
 
@@ -115,84 +105,79 @@ namespace color_modulation
 	void sky_changer()
 	{
 		static auto sv_skyname = g::cvar->find(xorstr_("sv_skyname"));
-
-		auto sv_skyname_backup = g::cvar->find("sv_skyname")->GetString();
-
-		if (!settings::visuals::skychanger)
-			sv_skyname->SetValue(sv_skyname_backup);
-
+		
 		switch (settings::visuals::skychanger_mode)
 		{
-		case 0:
-			return;
+		case 1:
+			sv_skyname->SetValue(sv_skyname_backup);
 			break;
-		case 1: //Baggage
+		case 2: //Baggage
 			sv_skyname->SetValue("cs_baggage_skybox");
 			break;
-		case 2: //Tibet
+		case 3: //Tibet
 			sv_skyname->SetValue("cs_tibet");
 			break;
-		case 3: //Embassy
+		case 4: //Embassy
 			sv_skyname->SetValue("embassy");
 			break;
-		case 4: //Italy
+		case 5: //Italy
 			sv_skyname->SetValue("italy");
 			break;
-		case 5: //Daylight 1
+		case 6: //Daylight 1
 			sv_skyname->SetValue("sky_cs15_daylight01_hdr");
 			break;
-		case 6: //Daylight 2
+		case 7: //Daylight 2
 			sv_skyname->SetValue("sky_cs15_daylight02_hdr");
 			break;
-		case 7: //Daylight 3
+		case 8: //Daylight 3
 			sv_skyname->SetValue("sky_cs15_daylight03_hdr");
 			break;
-		case 8: //Daylight 4
+		case 9: //Daylight 4
 			sv_skyname->SetValue("sky_cs15_daylight04_hdr");
 			break;
-		case 9: //Cloudy
+		case 10: //Cloudy
 			sv_skyname->SetValue("sky_csgo_cloudy01");
 			break;
-		case 10: //Night 1
+		case 11: //Night 1
 			sv_skyname->SetValue("sky_csgo_night02");
 			break;
-		case 11: //Night 2
+		case 12: //Night 2
 			sv_skyname->SetValue("sky_csgo_night02b");
 			break;
-		case 12: //Night Flat
+		case 13: //Night Flat
 			sv_skyname->SetValue("sky_csgo_night_flat");
 			break;
-		case 13: //Day HD
+		case 14: //Day HD
 			sv_skyname->SetValue("sky_day02_05_hdr");
 			break;
-		case 14: //Day
+		case 15: //Day
 			sv_skyname->SetValue("sky_day02_05");
 			break;
-		case 15: //Rural
+		case 16: //Rural
 			sv_skyname->SetValue("sky_l4d_rural02_ldr");
 			break;
-		case 16: //Vertigo HD
+		case 17: //Vertigo HD
 			sv_skyname->SetValue("vertigo_hdr");
 			break;
-		case 17: //Vertigo Blue HD
+		case 18: //Vertigo Blue HD
 			sv_skyname->SetValue("vertigoblue_hdr");
 			break;
-		case 18: //Vertigo
+		case 19: //Vertigo
 			sv_skyname->SetValue("vertigo");
 			break;
-		case 19: //Vietnam
+		case 20: //Vietnam
 			sv_skyname->SetValue("vietnam");
 			break;
-		case 20: //Dusty Sky
+		case 21: //Dusty Sky
 			sv_skyname->SetValue("sky_dust");
 			break;
-		case 21: //Jungle
+		case 22: //Jungle
 			sv_skyname->SetValue("jungle");
 			break;
-		case 22: //Nuke
+		case 23: //Nuke
 			sv_skyname->SetValue("nukeblank");
 			break;
-		case 23: //Office
+		case 24: //Office
 			sv_skyname->SetValue("office");
 			break;
 		default:
@@ -317,22 +302,17 @@ namespace color_modulation
 		if (!is_vars_changed())
 			return;
 
-		//last_sky = settings::visuals::sky;
+		sv_skyname_backup = g::cvar->find(xorstr_("sv_skyname"))->GetString();
 
 		post_processing = globals::post_processing;
 		view_model_fov = settings::misc::viewmodel_fov;
 		debug_model_fov = settings::misc::debug_fov;
 		night_mode_state = settings::visuals::night_mode;
 
-		arms_color = settings::chams::arms::color;
-		arms_state = settings::chams::arms::enabled;
-		arms_wireframe_state = settings::chams::arms::wireframe;
-
 		set_convars();
 		set_material_tone();
 		sky_changer();
 
-		static auto sv_skyname_backup = g::cvar->find("sv_skyname")->GetString();
 		static auto sv_skyname = g::cvar->find(xorstr_("sv_skyname"));
 
 		for (auto i = g::mat_system->FirstMaterial(); i != g::mat_system->InvalidMaterial(); i = g::mat_system->NextMaterial(i))
@@ -347,31 +327,22 @@ namespace color_modulation
 			const auto _name = fnv::hash_runtime(name);
 			const auto _group = fnv::hash_runtime(group);
 
-			if (_group == model_textures)
-			{
-				if (std::string(name).substr(0, 28) != std::string(xorstr_("models/weapons/v_models/arms")))
-					continue;
-
-				if (std::string(name).substr(0, 34) == std::string(xorstr_("models/weapons/v_models/arms/glove")))
-					continue;
-
-				const auto color = settings::chams::arms::color;
-				if (settings::chams::arms::enabled)
-					material->ColorModulate(color.x, color.y, color.z);
-				else
-					material->ColorModulate(1.f, 1.f, 1.f);
-
-				//material->AlphaModulate(0.4f);
-
-				material->SetMaterialVarFlag(MATERIAL_VAR_WIREFRAME, settings::chams::arms::enabled && settings::chams::arms::wireframe);
-			}
-
 			if (!night_mode_first)
 				if (settings::visuals::night_mode)
 					night_mode_first = true; //Thanks, Credits to Klavaro - MartiNJ409
 				else continue;
+		}
 
-			sv_skyname->SetValue(settings::visuals::night_mode ? "sky_csgo_night02" : sv_skyname_backup);
+		static bool once = false;
+
+		if (settings::visuals::night_mode)
+		{
+			sv_skyname->SetValue("sky_csgo_night02");
+			once = true;
+		}
+		else if (!settings::visuals::night_mode && once)
+		{
+			sv_skyname->SetValue(sv_skyname_backup);
 		}
 	}
 }

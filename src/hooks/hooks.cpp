@@ -267,10 +267,9 @@ namespace hooks
 
 	void __fastcall scene_end::hooked(IVRenderView*& view)
 	{
-		Chams::Get().OnSceneEnd();
 		visuals::more_chams();
 
-		if (settings::chams::desync && settings::desync::enabled2)
+		if (settings::chams::localplayer::desync_chams && settings::desync::enabled2)
 			visuals::DesyncChams();
 
 		original(view);
@@ -281,7 +280,14 @@ namespace hooks
 
 	void __stdcall draw_model_execute::hooked(IMatRenderContext* context, const DrawModelState_t& state, const ModelRenderInfo_t& info, matrix3x4_t* bone)
 	{
+		if (g::mdl_render->IsForcedMaterialOverride() && !strstr(info.pModel->szName, "arms") && !strstr(info.pModel->szName, "weapons/v_"))
+			return original(g::mdl_render, context, &state, &info, bone);
+		
+		Chams::Get().OnDrawModelExecute(context, state, info, bone);
+		
 		original(g::mdl_render, context, &state, &info, bone);
+		
+		g::mdl_render->ForcedMaterialOverride(nullptr);
 	}
 
 	int __stdcall post_screen_effects::hooked(int value)

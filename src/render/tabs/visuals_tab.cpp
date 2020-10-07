@@ -156,135 +156,182 @@ namespace render
 
 			child("Chams", []()
 				{
-					static const char* ChamsTypes[] = {
-					"Visible - Normal",
-					"Visible - Flat",
-					"Visible - Wireframe",
-					"Visible - Glass",
-					"Visible - Metallic",
-					"Visible - Crystal Blue",
-					"Visible - Metal Gibs",
-					"Visible - Shards",
-					"Visible - Glow",
-					"XQZ - Normal",
-					"XQZ - Flat",
-					"XQZ - Metallic"
-					};
-
-					static const char* bttype[] = {
-					"Off",
-					"Last Tick",
-					"All Ticks"
-					};
-
-					static const char* chamsMaterials[] = {
-					"Normal",
-					"Dogtags",
-					"Flat",
-					"Metallic",
-					"Platinum",
-					"Glass",
-					"Crystal",
-					"Gold",
-					"Dark Chrome",
-					"Plastic/Gloss",
-					"Glow"
-					};
-
-					columns(2);
-					{
-						checkbox("Enemy", &settings::chams::enemynew);
-
-						ImGui::NextColumn();
-
-						ImGui::PushItemWidth(-1);
-						ImGui::Combo("Enemy - Mode", &settings::chams::enemymodenew, ChamsTypes, IM_ARRAYSIZE(ChamsTypes));
-						ImGui::PopItemWidth();
-					}
-					columns(1);
-
-					columns(2);
-					{
-						checkbox("Team", &settings::chams::teamnew);
-
-						ImGui::NextColumn();
-
-						ImGui::PushItemWidth(-1);
-						ImGui::Combo("Team - Mode", &settings::chams::teammodenew, ChamsTypes, IM_ARRAYSIZE(ChamsTypes));
-						ImGui::PopItemWidth();
-					}
-					columns(1);
-
-					columns(2);
-					{
-						checkbox("Local", &settings::chams::localnew);
-
-						ImGui::NextColumn();
-
-						ImGui::PushItemWidth(-1);
-						ImGui::Combo("Local - Mode", &settings::chams::localmodenew, ChamsTypes, IM_ARRAYSIZE(ChamsTypes));
-						ImGui::PopItemWidth();
-					}
-					columns(1);
-
-					columns(2);
-					{
-						checkbox("Real Angle   ", &settings::chams::desync);
-
-						ImGui::NextColumn();
-
-						ImGui::PushItemWidth(-1);
-						ImGui::Combo("Material", &settings::chams::desyncChamsMode, chamsMaterials, IM_ARRAYSIZE(chamsMaterials));
-						ImGui::PopItemWidth();
-					}
-					columns(1);
-
-					ImGui::SameLine();
-					checkbox("Planted C4", &settings::chams::plantedc4_chams);
-					checkbox("Weapons (?)       ", &settings::chams::wep_droppedchams);
-					tooltip("Dropped Weapons Chams");
-					ImGui::SameLine();
-					checkbox("Nades", &settings::chams::nade_chams);
-					checkbox("Health Chams", &settings::chams::health_chams);
-
 					static const char* glow_modes[] = {
 						"Exterior",
 						"Interior",
 						"Outline"
 					};
 
+					static const char* chams_list[] = {
+						"Enemies",
+						"Teammates",
+						"Localplayer",
+						"Misc",
+						"Styles"
+					};
+
+					static const char* glow_list[] = {
+						"Enemies",
+						"Teammates",
+						"Misc"
+					};
+
+					ImGui::Combo("List##chams", &settings::chams::chams_list_mode, chams_list, IM_ARRAYSIZE(chams_list));
+
+					bool b_wip = false;
+
+					switch (settings::chams::chams_list_mode)
+					{
+					case 0:
+						columns(2);
+						{
+							checkbox("Enabled", &settings::chams::enemy::enabled);
+
+							checkbox("Wireframe", &settings::chams::enemy::wireframe);
+
+							ImGui::NextColumn();
+
+							ImGui::PushItemWidth(-1);
+							checkbox("Visible only", &settings::chams::enemy::visible_only);
+							ImGui::PopItemWidth();
+
+							checkbox("Flat", &settings::chams::enemy::flat);
+						}
+						columns(1);
+						break;
+					case 1:
+						columns(2);
+						{
+							checkbox("Enabled", &settings::chams::teammates::enabled);
+
+							checkbox("Wireframe", &settings::chams::localplayer::wireframe);
+
+							ImGui::NextColumn();
+
+							ImGui::PushItemWidth(-1);
+							checkbox("Visible only", &settings::chams::teammates::visible_only);
+							ImGui::PopItemWidth();
+
+							checkbox("Flat", &settings::chams::teammates::flat);
+						}
+						columns(1);
+						break;
+					case 2:
+						columns(2);
+						{
+							checkbox("Enabled", &settings::chams::localplayer::enabled);
+
+							checkbox("Wireframe", &settings::chams::localplayer::wireframe);
+
+							ImGui::NextColumn();
+
+							ImGui::PushItemWidth(-1);
+							checkbox("Desync chams", &settings::chams::localplayer::desync_chams);
+							ImGui::PopItemWidth();
+
+							checkbox("Flat", &settings::chams::localplayer::flat);
+						}
+						columns(1);
+						break;
+					case 3:
+						columns(2);
+						{
+							checkbox("Guns", &settings::chams::misc::weapon_chams);
+
+							ImGui::NextColumn();
+
+							ImGui::PushItemWidth(-1);
+							checkbox("Dropped Guns", &settings::chams::misc::dropped_weapons);
+							ImGui::PopItemWidth();
+						}
+						columns(1);
+
+						columns(2);
+						{
+							checkbox("Planted C4", &settings::chams::misc::planted_bomb_chams);
+
+							ImGui::NextColumn();
+
+							ImGui::PushItemWidth(-1);
+							checkbox("Dropped C4", &settings::chams::misc::dropped_bomb_chams);
+							ImGui::PopItemWidth();
+						}
+						columns(1);
+
+						columns(2);
+						{
+							checkbox("Nades", &settings::chams::misc::nade_chams);
+
+							ImGui::NextColumn();
+
+							ImGui::PushItemWidth(-1);
+							checkbox("Accesories", &settings::chams::misc::accesories_chams);
+							ImGui::PopItemWidth();
+						}
+						columns(1);
+						checkbox("Arms", &settings::chams::misc::arms_chams);
+						break;
+					case 4:
+						checkbox("TODO: Work In Progress!", &b_wip);
+						checkbox("In this section, nothing here works", &b_wip);
+						checkbox("not a bug btw.", &b_wip);
+						checkbox("Test: Arms - style", &b_wip);
+						checkbox("Test: Arms - Wireframe, etc...", &b_wip);
+						break;
+					}
+
 					child("Glow", []()
 						{
+							ImGui::Combo("List##glow", &settings::glow::glow_list_mode, glow_list, IM_ARRAYSIZE(glow_list));
 
-							columns(2);
+							switch (settings::glow::glow_list_mode)
 							{
-								checkbox("Enemy", &settings::glow::glowEnemyEnabled);
+							case 0:
+								columns(2);
+								{
+									checkbox("Enabled", &settings::glow::glowEnemyEnabled);
 
-								ImGui::NextColumn();
+									ImGui::NextColumn();
 
-								ImGui::PushItemWidth(-1);
-								ImGui::Combo("Enemy - Mode", &settings::glow::style_enemy, glow_modes, IM_ARRAYSIZE(glow_modes));
-								ImGui::PopItemWidth();
+									ImGui::PushItemWidth(-1);
+									ImGui::Combo("Mode", &settings::glow::style_enemy, glow_modes, IM_ARRAYSIZE(glow_modes));
+									ImGui::PopItemWidth();
+								}
+								columns(1);
+								break;
+							case 1:
+								columns(2);
+								{
+									checkbox("Enabled", &settings::glow::glowTeamEnabled);
+
+									ImGui::NextColumn();
+
+									ImGui::PushItemWidth(-1);
+									ImGui::Combo("Mode", &settings::glow::style_teammate, glow_modes, IM_ARRAYSIZE(glow_modes));
+									ImGui::PopItemWidth();
+								}
+								columns(1);
+								break;
+							case 2:
+								columns(2);
+								{
+									checkbox("Planted C4", &settings::glow::glowC4PlantedEnabled);
+
+									ImGui::NextColumn();
+
+									ImGui::PushItemWidth(-1);
+									checkbox("Nades", &settings::glow::glowNadesEnabled);
+									ImGui::PopItemWidth();
+								}
+								columns(1);
+
+								columns(2);
+								{
+									checkbox("Dropped Guns", &settings::glow::glowDroppedWeaponsEnabled);
+								}
+								columns(1);
+								break;
 							}
-							columns(1);
-
-							columns(2);
-							{
-								checkbox("Team  ", &settings::glow::glowTeamEnabled);
-
-								ImGui::NextColumn();
-
-								ImGui::PushItemWidth(-1);
-								ImGui::Combo("Team - Mode", &settings::glow::style_teammate, glow_modes, IM_ARRAYSIZE(glow_modes));
-								ImGui::PopItemWidth();
-							}
-							columns(1);
-
-							checkbox("Planted C4         ", &settings::glow::glowC4PlantedEnabled);
-							ImGui::SameLine();
-							checkbox("Nades", &settings::glow::glowNadesEnabled);
-							checkbox("Weapons (?)", &settings::glow::glowDroppedWeaponsEnabled);
-							tooltip("Dropped Weapons Glow");
 						});
 				});
 

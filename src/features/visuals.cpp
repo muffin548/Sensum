@@ -43,8 +43,8 @@ namespace visuals
 		if (!collideable)
 			return rect;
 
-		auto min = collideable->OBBMins();
-		auto max = collideable->OBBMaxs();
+		const auto& min = collideable->OBBMins();
+		const auto& max = collideable->OBBMaxs();
 
 		const matrix3x4_t& trans = ent->m_rgflCoordinateFrame();
 
@@ -293,7 +293,7 @@ namespace visuals
 		if (!g::engine_client->IsConnected() || !g::engine_client->IsInGame())
 			return;
 
-		auto settings = settings::aimbot::m_items[pWeapon->m_iItemDefinitionIndex()];
+		const auto& settings = settings::aimbot::m_items[pWeapon->m_iItemDefinitionIndex()];
 
 		bool dynamic_fov = settings.dynamic_fov;
 
@@ -422,14 +422,12 @@ namespace visuals
 
 	void more_chams() noexcept
 	{
-		static IMaterial* mat = nullptr;
-
-		static IMaterial* flat = g::mat_system->FindMaterial("sensum_regular", TEXTURE_GROUP_MODEL);
-
-		mat = flat;
+		static IMaterial* mat = g::mat_system->FindMaterial("debug/debugambientcube", TEXTURE_GROUP_MODEL);
 
 		for (int i = 0; i < g::entity_list->GetHighestEntityIndex(); i++) {
 			auto entity = reinterpret_cast<c_base_player*>(g::entity_list->GetClientEntity(i));
+
+			auto grenade = reinterpret_cast<c_base_combat_weapon*>(g::entity_list->GetClientEntity(i));
 
 			if (entity && entity != g::local_player) {
 				auto client_class = entity->GetClientClass();
@@ -438,8 +436,8 @@ namespace visuals
 				switch (client_class->m_ClassID) {
 				case EClassId::CPlantedC4:
 				case EClassId::CBaseAnimating:
-					if (settings::chams::plantedc4_chams) {
-						g::render_view->SetColorModulation(settings::chams::colorPlantedC4Chams.r() / 255.f, settings::chams::colorPlantedC4Chams.g() / 255.f, settings::chams::colorPlantedC4Chams.b() / 255.f);
+					if (settings::chams::misc::planted_bomb_chams) {
+						g::render_view->SetColorModulation(settings::chams::misc::color_planted_bomb_chams.r() / 255.f, settings::chams::misc::color_planted_bomb_chams.g() / 255.f, settings::chams::misc::color_planted_bomb_chams.b() / 255.f);
 						mat->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, true);
 						g::mdl_render->ForcedMaterialOverride(mat);
 						entity->DrawModel(1, 255);
@@ -461,8 +459,8 @@ namespace visuals
 				case EClassId::CBaseParticleEntity:
 				case EClassId::CSensorGrenade:
 				case EClassId::CSensorGrenadeProjectile:
-					if (settings::chams::nade_chams) {
-						g::render_view->SetColorModulation(settings::chams::colorNadeChams.r() / 255.f, settings::chams::colorNadeChams.g() / 255.f, settings::chams::colorNadeChams.b() / 255.f);
+					if (settings::chams::misc::nade_chams && grenade && grenade->m_nExplodeEffectTickBegin() < 1) {
+						g::render_view->SetColorModulation(settings::chams::misc::color_nade_chams.r() / 255.f, settings::chams::misc::color_nade_chams.g() / 255.f, settings::chams::misc::color_nade_chams.b() / 255.f);
 						mat->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, true);
 						g::mdl_render->ForcedMaterialOverride(mat);
 						entity->DrawModel(1, 255);
@@ -472,8 +470,8 @@ namespace visuals
 
 				if (client_class->m_ClassID == CAK47 || client_class->m_ClassID == CDEagle || client_class->m_ClassID == CC4 ||
 					client_class->m_ClassID >= CWeaponAug && client_class->m_ClassID <= CWeaponXM1014) {
-					if (settings::chams::wep_droppedchams) {
-						g::render_view->SetColorModulation(settings::chams::ColorWeaponDroppedChams.r() / 255.f, settings::chams::ColorWeaponDroppedChams.g() / 255.f, settings::chams::ColorWeaponDroppedChams.b() / 255.f);
+					if (settings::chams::misc::dropped_weapons) {
+						g::render_view->SetColorModulation(settings::chams::misc::color_dropped_weapons_chams.r() / 255.f, settings::chams::misc::color_dropped_weapons_chams.g() / 255.f, settings::chams::misc::color_dropped_weapons_chams.b() / 255.f);
 						mat->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, true);
 						g::mdl_render->ForcedMaterialOverride(mat);
 						entity->DrawModel(1, 255);
@@ -565,7 +563,7 @@ namespace visuals
 		PlasticGloss->IncrementReferenceCount();
 		Glow->IncrementReferenceCount();
 
-		switch (settings::chams::desyncChamsMode)
+		switch (settings::chams::localplayer::desync_chams_mode)
 		{
 		case 0: material = Normal;
 			break;
@@ -596,7 +594,7 @@ namespace visuals
 		if (g::input->m_fCameraInThirdPerson)
 		{
 			g::mdl_render->ForcedMaterialOverride(material);
-			g::render_view->SetColorModulation(settings::chams::desync_color.r(), settings::chams::desync_color.g(), settings::chams::desync_color.b());
+			g::render_view->SetColorModulation(settings::chams::localplayer::desync_color.r(), settings::chams::localplayer::desync_color.g(), settings::chams::localplayer::desync_color.b());
 		}
 		g::local_player->GetClientRenderable()->DrawModel(0x1, 255);
 		g::local_player->SetAngle2(OrigAng);

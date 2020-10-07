@@ -165,10 +165,10 @@ namespace hooks
 			aimbot::OnMove(cmd);
 
 		if (settings::misc::smoke_helper)
-		{
 			visuals::SmokeHelperAimbot(cmd);
-			visuals::PopflashHelperAimbot(cmd);
-		}
+
+		if(settings::misc::flash_helper)
+		   visuals::PopflashHelperAimbot(cmd);
 
 		visuals::runCM(cmd);
 

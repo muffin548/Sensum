@@ -7,7 +7,7 @@
 #include "../helpers/console.h"
 #include "../helpers/notifies.h"
 #include "../features/features.h"
-#define VERSION "1.7.0"
+#define VERSION "1.8.0"
 
 const char* const KeyNames[] =
 {

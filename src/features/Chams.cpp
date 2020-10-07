@@ -1,183 +1,164 @@
+#include <fstream>
+
 #include "Chams.h"
 #include "../settings/settings.h"
 #include "../features/features.h"
 #include "../hooks/hooks.h"
-#include <fstream>
 #include "esp.hpp"
 
-bool IsXQZ()
+void RenderPlayers(const bool& ignorez, const bool& flat, const bool& wireframe, const Color& visible_color, const Color& occluded_color)
 {
-	if (settings::chams::enemymodenew == 0)
-		return false;
+	static IMaterial* material = g::mat_system->FindMaterial("debug/debugambientcube", TEXTURE_GROUP_OTHER);
 
-	if (settings::chams::enemymodenew == 1)
-		return false;
+	const auto color = ignorez ? occluded_color : visible_color;
+	material->ColorModulate(color.r() / 255.0f, color.g() / 255.0f, color.b() / 255.0f);
+	material->AlphaModulate(color.a() / 255.0f);
+	material->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, ignorez);
+	material->SetMaterialVarFlag(MATERIAL_VAR_WIREFRAME, wireframe);
 
-	if (settings::chams::enemymodenew == 2)
-		return false;
-
-	if (settings::chams::enemymodenew == 3)
-		return false;
-
-	if (settings::chams::enemymodenew == 4)
-		return false;
-
-	if (settings::chams::enemymodenew == 5)
-		return false;
-
-	if (settings::chams::enemymodenew == 6)
-		return false;
-
-	if (settings::chams::enemymodenew == 7)
-		return false;
-
-	if (settings::chams::enemymodenew == 8)
-		return false;
-
-	if (settings::chams::enemymodenew == 9)
-		return true;
-
-	if (settings::chams::enemymodenew == 10)
-		return true;
-
-	if (settings::chams::enemymodenew == 11)
-		return true;
-
-	return false;
+	/*material->FindVar("$envmap")->SetStringValue("env_cubemap");
+	material->FindVar("$envmaptint")->SetVectorValue(.3f, .3f, .3f);
+	material->FindVar("$envmapcontrast")->SetIntValue(1);
+	material->FindVar("$envmapsaturation")->SetFloatValue(1.0f);
+	material->FindVar("$phong")->SetIntValue(1);
+	material->FindVar("$phongexponent")->SetFloatValue(15.0f);
+	material->FindVar("$normalmapalphaenvmask")->SetIntValue(1);
+	material->FindVar("$phongboost")->SetFloatValue(6.0f);*/
+	
+	g::mdl_render->ForcedMaterialOverride(material);
 }
 
-void Chams::OnSceneEnd()
-{
-	if (!g::engine_client->IsInGame() || !g::engine_client->IsConnected() || !g::local_player)
-		return;
+void Chams::OnDrawModelExecute(IMatRenderContext* ctx, const DrawModelState_t& state, const ModelRenderInfo_t& info, matrix3x4_t* bone)
+{ 
+	c_base_player* player = c_base_player::GetPlayerByIndex(info.entity_index);
 
-	ChamsModes LocalChamsMode = (ChamsModes)settings::chams::localmodenew;
-	ChamsModes TeamChamsMode = (ChamsModes)settings::chams::teammodenew;
-	ChamsModes EnemyChamsMode = (ChamsModes)settings::chams::enemymodenew;
+	static auto original = hooks::draw_model_execute::original;
 
-	bool LocalChams = settings::chams::localnew;
-	bool TeamChams = settings::chams::teamnew;
-	bool EnemyChams = settings::chams::enemynew;
+	const char* model_name = info.pModel->szName;
 
-	Color LocalColor = settings::chams::LocalColor_vis;
-	Color TeamColor = settings::chams::TeamColor_vis;
-	Color EnemyColor = settings::chams::EnemyColor_vis;
-
-	Color LocalColorXqz = settings::chams::LocalColor_XQZ;
-	Color TeamColorXqz = settings::chams::TeamColor_XQZ;
-	Color EnemyColorXqz = settings::chams::EnemyColor_XQZ;
-
-	for (int i = 1; i < g::engine_client->GetMaxClients(); i++)
+	if (info.entity_index > 0 && info.entity_index <= 64)
 	{
-		auto entity = static_cast<c_base_player*>(g::entity_list->GetClientEntity(i));
-		if (!entity || !entity->IsPlayer() || entity->IsDormant() || !entity->IsAlive())
-			continue;
-
-		if (utils::is_line_goes_through_smoke(g::local_player->GetEyePos(), entity->get_hitbox_position(entity, HITBOX_HEAD))) //GetRenderOrigin()
-			continue;
-
-		bool IsLocal = entity == g::local_player;
-		bool IsTeam = !entity->IsEnemy();
-
-		bool normal = false;
-		bool flat = false;
-		bool wireframe = false;
-		bool glass = false;
-		bool metallic = false;
-		bool xqz = false;
-		bool metallic_xqz = false;
-		bool flat_xqz = false;
-		bool glow = false;
-		bool glow_xqz = false;
-		bool crystal_blue = false;
-		bool metal_gibs = false;
-		bool shards = false;
-		bool dev_glow = false;
-
-		ChamsModes mode = IsLocal ? LocalChamsMode : (IsTeam ? TeamChamsMode : EnemyChamsMode);
-
-		if (IsLocal && !LocalChams)
+		if (player && g::local_player)
 		{
-			continue;
-		}
-		if ((IsTeam && !IsLocal) && !TeamChams)
-		{
-			continue;
-		}
-		if (!IsTeam && !EnemyChams)
-		{
-			continue;
-		}
+			if (player->m_iTeamNum() != g::local_player->m_iTeamNum()) //enemy chams
+			{
+				if (!settings::chams::enemy::enabled)
+					return;
 
+				Color vis = settings::chams::enemy::color_visible;
+				Color not_vis = settings::chams::enemy::color_not_visible;
 
-		Color clr = IsLocal ? LocalColor : (IsTeam ? TeamColor : (!IsXQZ() ? EnemyColorXqz : EnemyColor));
-		Color clr2 = IsLocal ? LocalColorXqz : (IsTeam ? TeamColorXqz : (IsXQZ() ? EnemyColorXqz : EnemyColor));
+				bool flat = settings::chams::enemy::flat;
+				bool wireframe = settings::chams::enemy::wireframe;
 
-		switch (mode)
-		{
-		case ChamsModes::regular:
-			normal = true;
-			break;
-		case ChamsModes::flat:
-			flat = true;
-			break;
-		case ChamsModes::wireframe:
-			wireframe = true;
-			break;
-		case ChamsModes::glass:
-			glass = true;
-			break;
-		case ChamsModes::reflective:
-			metallic = true;
-			break;
-		case ChamsModes::crystal_blue:
-			crystal_blue = true;
-			break;
-		case ChamsModes::metal_gibs:
-			metal_gibs = true;
-			break;
-		case ChamsModes::shards:
-			shards = true;
-			break;
-		case ChamsModes::dev_glow:
-			dev_glow = true;
-			break;
-		case ChamsModes::regular_xqz:
-			normal = true;
-			xqz = true;
-			break;
-		case ChamsModes::flat_xqz:
-			flat = true;
-			flat_xqz = true;
-			break;
-		case ChamsModes::reflective_xqz:
-			metallic = true;
-			metallic_xqz = true;
-			break;
+				if (!settings::chams::enemy::visible_only)
+				{
+					RenderPlayers(true, flat, wireframe, vis, not_vis);
+					original(g::mdl_render, ctx, &state, &info, bone);
+				}
+				RenderPlayers(false, flat, wireframe, vis, not_vis);
+			}
+			else if (player->m_iTeamNum() == g::local_player->m_iTeamNum() && player != g::local_player)
+			{
+				if (!settings::chams::teammates::enabled)
+					return;
+
+				Color vis = settings::chams::teammates::color_visible;
+				Color not_vis = settings::chams::teammates::color_not_visible;
+
+				bool flat = settings::chams::teammates::flat;
+				bool wireframe = settings::chams::enemy::wireframe;
+
+				if (!settings::chams::enemy::visible_only)
+				{
+					RenderPlayers(true, flat, wireframe, vis, not_vis);
+					original(g::mdl_render, ctx, &state, &info, bone);
+				}
+				RenderPlayers(false, flat, wireframe, vis, not_vis);
+			}
+			else if (player == g::local_player)
+			{
+				if (!settings::chams::localplayer::enabled)
+					return;
+
+				Color vis = settings::chams::localplayer::color;
+
+				bool flat = settings::chams::localplayer::flat;
+				bool wireframe = settings::chams::localplayer::wireframe;
+
+				RenderPlayers(false, flat, wireframe, vis, vis);
+				original(g::mdl_render, ctx, &state, &info, bone);
+			}
 		}
-
-		int health = entity->m_iHealth();
-
-		if (settings::chams::health_chams)
-		{
-			if (health == 100 || health >= 81)
-				clr2 = Color(5, 255, 0, 255);
-			else if (health == 80 || health >= 61)
-				clr2 = Color::Yellow;
-			else if (health == 60 || health >= 21)
-				clr2 = Color(255, 127, 0, 255); //Orange
-			else if (health <= 20)
-				clr2 = Color::Red;
-		}
-
-		MaterialManager::Get().OverrideMaterial(xqz || metallic_xqz || flat_xqz, flat, wireframe, glass, metallic, crystal_blue, metal_gibs, shards, dev_glow, clr2);
-		entity->GetClientRenderable()->DrawModel(0x1, 255);
-		if (xqz || metallic_xqz || flat_xqz || glow_xqz)
-		{
-			MaterialManager::Get().OverrideMaterial(false, flat, wireframe, glass, metallic, crystal_blue, metal_gibs, shards, dev_glow, clr);
-			entity->GetClientRenderable()->DrawModel(0x1, 255);
-		}
-		g::mdl_render->ForcedMaterialOverride(nullptr);
 	}
-	g::mdl_render->ForcedMaterialOverride(nullptr);
+
+	static IMaterial* material = g::mat_system->FindMaterial("debug/debugambientcube", TEXTURE_GROUP_MODEL);
+
+	if (settings::chams::misc::weapon_chams) //Since I dont know the perfomance difference between strstr and std::string.find,
+	{                                        // I will use strstr, more research needed.
+		if (strstr(model_name, "weapons/v")) //Weapons in hand.
+		{
+			if (!strstr(model_name, "arms") && !strstr(model_name, "ied_dropped")) //ied is c4 on ground/on back.
+			{
+				material->ColorModulate(Color::Green.r() / 255.0f, Color::Green.g() / 255.0f, Color::Green.b() / 255.0f);
+				material->AlphaModulate(Color::Green.a() / 255.0f);
+				material->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, false);
+
+				g::mdl_render->ForcedMaterialOverride(material);
+			}
+		}
+	}
+
+	if (settings::chams::misc::arms_chams)
+	{
+		if (strstr(model_name, "arms"))
+		{
+			if (!strstr(model_name, "ied_dropped")) //ied is c4 on ground/on back.
+			{
+				material->ColorModulate(Color::Blue.r() / 255.0f, Color::Blue.g() / 255.0f, Color::Blue.b() / 255.0f);
+				material->AlphaModulate(Color::Blue.a() / 255.0f);
+				material->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, false);
+
+				g::mdl_render->ForcedMaterialOverride(material);
+			}
+		}
+	}
+
+	if (settings::chams::misc::accesories_chams)
+	{
+		if (strstr(model_name, "_dropped.mdl") && strstr(model_name, "weapons/w")) //Weapons on back.
+		{
+			if (!strstr(model_name, "arms") && !strstr(model_name, "ied_dropped")) //ied is c4 on ground/on back.
+			{
+				material->ColorModulate(Color::Green.r() / 255.0f, Color::Green.g() / 255.0f, Color::Green.b() / 255.0f);
+				material->AlphaModulate(Color::Green.a() / 255.0f);
+				material->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, false);
+
+				g::mdl_render->ForcedMaterialOverride(material);
+			}
+		}
+
+		if (strstr(model_name, "weapons/w")) //Weapons in enemy hands.
+		{
+			if (!strstr(model_name, "arms") && !strstr(model_name, "ied_dropped")) //ied is c4 on ground/on back.
+			{
+				material->ColorModulate(Color::White.r() / 255.0f, Color::White.g() / 255.0f, Color::White.b() / 255.0f);
+				material->AlphaModulate(Color::White.a() / 255.0f);
+				material->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, false);
+
+				g::mdl_render->ForcedMaterialOverride(material);
+			}
+		}
+
+		if (strstr(model_name, "defuser")) //Defuse kit on body.
+		{
+			if (!strstr(model_name, "arms") && !strstr(model_name, "ied_dropped")) //ied is c4 on ground/on back.
+			{
+				material->ColorModulate(Color::Red.r() / 255.0f, Color::Red.g() / 255.0f, Color::Red.b() / 255.0f);
+				material->AlphaModulate(Color::Red.a() / 255.0f);
+				material->SetMaterialVarFlag(MATERIAL_VAR_IGNOREZ, false);
+				g::mdl_render->ForcedMaterialOverride(material);
+			}
+		}
+	}
 }
