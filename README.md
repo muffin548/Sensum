@@ -1,4 +1,4 @@
-# Sensum - Internal legit cheat | Discord: https://discord.gg/FnAJfra
+# Sensum - Internal legit cheat | https://discord.gg/FnAJfra
 
 Remember to compile in Release x86 to minimalize fps drops and other problems.
 
