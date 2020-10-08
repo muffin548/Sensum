@@ -9,7 +9,7 @@ IMPORTANT: Config location since now is in "C:\\Sensum".
 
 IMPORTANT: Remember to put skin_kits.json file into "Sensum" folder in C drive. (Ex: C:\\Sensum)
 
-![Screenshot](https://i.imgur.com/Jwo5jnZ.png)
+![Screenshot](https://i.imgur.com/kEH7rpT.png)
 
 
 
